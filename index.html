@@ -2059,6 +2059,51 @@ else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setTi
 }
 window.addEventListener('online',()=>{if(sb&&currentUser)rtHeartbeat();});
 window.addEventListener('offline',()=>{rtDbOk=false;rtPaint();});
+/* ===== Realtime auto-recovery: watchdog + full rebuild + data resync ===== */
+let rtBadSince=0,rtRebuilding=false,rtHiddenAt=0,rtAuthBound=false;
+async function rtResync(){
+ if(!sb||!currentUser)return;
+ try{
+  const oldChat=new Set((data.chat||[]).map(m=>m.id));
+  const jobs=[['patients','patients'],['visits','visits'],['chat','chat_messages'],['staffProfiles','staff_profiles'],['drugPackages','drug_packages']];
+  for(const [store,table] of jobs){const {data:rows,error}=await sb.from(table).select('*');if(!error&&rows)data[store]=rows.map(r=>fromRow(store,r));}
+  const {data:sr,error:se}=await sb.from('settings').select('*');
+  if(!se&&sr)sr.forEach(r=>{data.settings[r.key]=r.value;});
+  if(typeof filePatient!=='undefined'&&filePatient){loadedPatientRecords.delete(filePatient.id);await loadPatientRecords(filePatient.id);}
+  if(visitsRecordsLoaded){visitsRecordsLoaded=false;await loadAllVisitRecords();}
+  (data.chat||[]).filter(m=>!oldChat.has(m.id)).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(m=>{try{receivePM(m);}catch(e){}});
+  renderAll();
+ }catch(e){console.warn('resync failed',e);}
+}
+async function rtRebuild(){
+ if(rtRebuilding||!currentUser||!sb)return;
+ rtRebuilding=true;
+ try{await unsubscribeRealtime();subscribeRealtime();await rtResync();}
+ catch(e){console.warn('rebuild failed',e);}
+ finally{rtRebuilding=false;rtBadSince=0;}
+}
+function rtBindAuth(){
+ if(rtAuthBound||!sb)return;rtAuthBound=true;
+ try{sb.auth.onAuthStateChange((ev,s)=>{if(s&&s.access_token){try{sb.realtime.setAuth(s.access_token);}catch(_){}}});}catch(e){}
+}
+setInterval(()=>{
+ rtBindAuth();
+ if(!currentUser||rtRebuilding)return;
+ if(Object.keys(rtBad).length){
+  if(!rtBadSince)rtBadSince=Date.now();
+  else if(Date.now()-rtBadSince>20000&&navigator.onLine)rtRebuild();
+ }else rtBadSince=0;
+},5000);
+function rtWake(){
+ if(!currentUser||!sb)return;
+ const away=rtHiddenAt?Date.now()-rtHiddenAt:0;rtHiddenAt=0;
+ rtHeartbeat();
+ if(Object.keys(rtBad).length||away>120000)rtRebuild();
+ else if(away>30000)rtResync();
+}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')rtHiddenAt=Date.now();else rtWake();});
+window.addEventListener('focus',rtWake);
+window.addEventListener('online',()=>{if(currentUser)setTimeout(rtRebuild,1500);});
 const FIELDS=[
 {k:'name',label:'اسم المريضة *',type:'text',ph:'ادخل الاسم...'},
 {k:'age',label:'السن *',type:'text',numeric:true},
