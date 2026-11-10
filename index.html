@@ -449,6 +449,13 @@ table{min-width:720px}
 .pd-note{min-height:44px}
 @media (max-width:520px){.apegld-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
+<style id="chat-fix">
+#msgs{direction:ltr}
+#msgs .msg{direction:rtl;text-align:right}
+#msgs .msg.me{align-self:flex-end}
+#msgs .msg.them{align-self:flex-start}
+#msgs>:first-child{margin-top:auto}
+</style>
 </head>
 <body>
 <div id="globalError" style="display:none;position:fixed;inset:0;background:#fef2f2;z-index:99999;align-items:center;justify-content:center;padding:20px">
@@ -2030,7 +2037,7 @@ RT_TABLES.forEach(([table,store])=>startTableChannel(table,store,gen,0));
 // presence (online users) on its own channel
 const pc=sb.channel('clinic-presence-'+gen);
 ch=pc;
-pc.on('presence',{event:'sync'},()=>{const st=pc.presenceState();users=Object.values(st).flat().filter(u=>u.clientId!==clientId);renderUsers();});
+pc.on('presence',{event:'sync'},()=>setPresenceUsers(pc.presenceState()));
 pc.subscribe(async(status,err)=>{
 if(gen!==rtGen)return;
 if(status==='SUBSCRIBED'){try{await pc.track({clientId,userId:currentUser?.id||'',username:currentUser?.username||'',name:myName||currentUser?.username||'Unknown'});}catch(e){console.warn('Realtime track failed',e);}}
@@ -2044,7 +2051,7 @@ clearInterval(rtHb);rtHeartbeat();rtHb=setInterval(rtHeartbeat,15000);
 function subscribeRealtimePresenceOnly(gen){
 if(gen!==rtGen||!currentUser)return;
 const pc=sb.channel('clinic-presence-'+gen+'-'+Date.now());ch=pc;
-pc.on('presence',{event:'sync'},()=>{const st=pc.presenceState();users=Object.values(st).flat().filter(u=>u.clientId!==clientId);renderUsers();});
+pc.on('presence',{event:'sync'},()=>setPresenceUsers(pc.presenceState()));
 pc.subscribe(async(status)=>{if(gen!==rtGen)return;if(status==='SUBSCRIBED'){try{await pc.track({clientId,userId:currentUser?.id||'',username:currentUser?.username||'',name:myName||currentUser?.username||'Unknown'});}catch(e){}}
 else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setTimeout(()=>{if(gen===rtGen&&currentUser&&ch===pc){try{sb.removeChannel(pc);}catch(e){}subscribeRealtimePresenceOnly(gen);}},15000);}});
 }
@@ -4435,40 +4442,71 @@ if(globalCounts.prescriptions===null)refreshGlobalCounts();
 }
 function monthLabel(m){try{const[y,mm]=m.split('-');return new Date(+y,+mm-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});}catch(e){return m;}}
 let users=[],activePeer=null,unread={};
+let __ac=null;
+const BASE_TITLE=document.title;
+document.addEventListener('click',()=>{
+  try{__ac=__ac||new (window.AudioContext||window.webkitAudioContext)();__ac.resume();}catch(e){}
+  try{if('Notification' in window&&Notification.permission==='default')Notification.requestPermission();}catch(e){}
+},{once:true});
+function beep(){
+  try{if(!__ac)return;const o=__ac.createOscillator(),g=__ac.createGain();
+  o.connect(g);g.connect(__ac.destination);o.frequency.value=880;
+  g.gain.setValueAtTime(.15,__ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(.001,__ac.currentTime+.35);
+  o.start();o.stop(__ac.currentTime+.35);}catch(e){}
+}
+function updateChatBadge(){
+  const n=Object.values(unread).reduce((a,b)=>a+b,0);
+  const b=$('chatBadge');if(b)b.textContent=n||'';
+  document.title=(n?'('+n+') ':'')+BASE_TITLE;
+}
+function setPresenceUsers(st){
+  const seen={};
+  users=Object.values(st).flat().filter(u=>u.userId&&u.userId!==(currentUser&&currentUser.id)&&!seen[u.userId]&&(seen[u.userId]=1));
+  renderUsers();
+}
 function renderUsers(){
-const box=$('usersList');
-if(!online){box.innerHTML='<li class="empty" style="padding:12px">Chat not available</li>';return;}
-if(!users.length){box.innerHTML='<li class="empty" style="padding:12px">Nobody else online</li>';return;}
-box.innerHTML=users.map(u=>`<li class="user-item ${activePeer&&activePeer.clientId===u.clientId?'active':''}"onclick="openConvo('${u.userId}')"><span class="dot"></span><span style="flex:1">${esc(u.name)}</span>${unread[u.clientId]?`<span class="badge">${unread[u.clientId]}</span>`:''}</li>`).join('');
+  const box=$('usersList');if(!box||!currentUser)return;
+  const on=new Set(users.map(u=>u.userId));
+  const list=(data.staffProfiles||[])
+    .filter(s=>s.id!==currentUser.id&&!s.blocked)
+    .sort((a,b)=>(on.has(b.id)-on.has(a.id))||String(a.username).localeCompare(b.username));
+  box.innerHTML=list.length?list.map(s=>`<li class="user-item ${activePeer&&activePeer.userId===s.id?'active':''}" onclick="openConvo('${s.id}')"><span class="dot" style="background:${on.has(s.id)?'#22c55e':'#cbd5e1'}"></span><span style="flex:1">${esc(s.username)}</span>${unread[s.id]?`<span class="badge">${unread[s.id]}</span>`:''}</li>`).join('')
+    :'<li class="empty" style="padding:12px">No other accounts</li>';
+  updateChatBadge();
 }
 function openConvo(userId){
-const u=users.find(x=>x.userId===userId);
-if(!u)return;
-activePeer=u;
-unread[userId]=0;
-$('convoHead').textContent='💬 With: '+(u.name||u.username||'User');
-renderMsgs();
-renderUsers();
-$('msgInput').focus();
+  const s=(data.staffProfiles||[]).find(x=>x.id===userId);if(!s)return;
+  activePeer={userId:s.id,name:s.username,username:s.username};
+  unread[userId]=0;
+  $('convoHead').textContent='💬 With: '+s.username;
+  renderMsgs();renderUsers();$('msgInput').focus();
 }
 function renderMsgs(){
-const box=$('msgs');
-if(!activePeer || !currentUser){box.innerHTML='<div class="empty">Select a person</div>';return;}
-const myId=currentUser.id;
-const peerId=activePeer.userId;
-const list=data.chat.filter(m=>(m.from===myId && m.to===peerId) || (m.from===peerId && m.to===myId)).sort((a,b)=>(a.ts||0)-(b.ts||0));
-box.innerHTML=list.map(m=>{const mine=m.from===myId;return `<div class="msg ${mine?'me':'them'}">${esc(m.text)}<span class="mt">${esc(mine?'Me':(m.fromName||''))}•${new Date(m.ts||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span></div>`;}).join('') || '<div class="empty">Start conversation</div>';
-box.scrollTop=box.scrollHeight;
+  const box=$('msgs');if(!box)return;
+  if(!activePeer||!currentUser){box.innerHTML='<div class="empty">Select a person</div>';return;}
+  const me=currentUser.id,peer=activePeer.userId;
+  const list=data.chat.filter(m=>(m.from===me&&m.to===peer)||(m.from===peer&&m.to===me)).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  box.innerHTML=list.map(m=>{const mine=m.from===me;
+    return `<div class="msg ${mine?'me':'them'}">${esc(m.text)}<span class="mt">${esc(mine?'Me':(m.fromName||''))} • ${new Date(m.ts||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
+  }).join('')||'<div class="empty">Start conversation</div>';
+  box.scrollTop=box.scrollHeight;
 }
-function receivePM(m){if(m.to===clientId){if(activePeer&&activePeer.clientId===m.from)renderMsgs();else{unread[m.from]=(unread[m.from]||0)+1;renderUsers();}}}
+function receivePM(m){
+  if(!currentUser||m.to!==currentUser.id||m.from===currentUser.id)return;
+  const open=!$('tab-chat').hidden&&activePeer&&activePeer.userId===m.from&&document.visibilityState==='visible';
+  if(open){renderMsgs();}else{unread[m.from]=(unread[m.from]||0)+1;renderUsers();}
+  const name=m.fromName||'Message';
+  toast('💬 '+name+': '+String(m.text).slice(0,60));
+  beep();
+  try{if('Notification' in window&&Notification.permission==='granted'&&document.visibilityState!=='visible')new Notification(name,{body:m.text});}catch(e){}
+}
 async function sendMsg(){
-const input=$('msgInput');
-const text=input.value.trim();
-if(!text||!activePeer||!currentUser)return;
-input.value='';
-const msg={id:uid(),from:currentUser.id,fromName:currentUser.username,to:activePeer.userId,toName:activePeer.name||activePeer.username||'',text,ts:Date.now()};
-await dbPut('chat',msg);
-renderMsgs();
+  const input=$('msgInput'),text=input.value.trim();
+  if(!activePeer){toast('⚠ اختار شخص الأول');return;}
+  if(!text||!currentUser)return;
+  input.value='';
+  await dbPut('chat',{id:uid(),from:currentUser.id,fromName:currentUser.username,to:activePeer.userId,toName:activePeer.name||'',text,ts:Date.now()});
 }
 function saveMyName(){myName=$('chatMyName').value.trim();localStorage.setItem(LS_NAME,myName);if(online&&ch)ch.track({clientId,userId:currentUser?.id||'',username:currentUser?.username||'',name:myName||currentUser?.username||'Unknown'});toast('✅ Saved');}
 function renderSettings(){
@@ -4649,13 +4687,14 @@ document.querySelectorAll('main > section, #appRoot > section').forEach(s=>s.hid
 $('tab-'+name).hidden=false;
 document.querySelectorAll('.tab').forEach(b=>b.classList.remove('active'));
 btn.classList.add('active');
-if(name==='chat'){renderUsers();renderMsgs();}
+if(name==='chat'){renderUsers();renderMsgs();if(activePeer){unread[activePeer.userId]=0;updateChatBadge();}}
 if(name==='visits'){loadAllVisitRecords().then(()=>renderGlobalSavedVisits());}
 if(name==='stats')renderStatsPage();
 }
 function renderAll(){
 if(!$('appRoot')||$('appRoot').style.display==='none')return;
 renderStats();renderQueue();renderAppointments();renderPatients();renderSettings();renderUsers();renderGlobalSavedVisits();
+if($('tab-chat')&&!$('tab-chat').hidden)renderMsgs();
 if(!$('tab-medicalfile').hidden&&filePatient){
 const fresh=data.patients.find(x=>x.id===filePatient.id);
 if(fresh){filePatient=fresh;refreshFileInfo();renderPfIdentity();renderVisitHistory();renderSavedMedicalFiles();}
