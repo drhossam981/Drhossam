@@ -455,6 +455,8 @@ table{min-width:720px}
 #msgs .msg.me{align-self:flex-end}
 #msgs .msg.them{align-self:flex-start}
 #msgs>:first-child{margin-top:auto}
+#msgs .msg .md{border:0;background:none;cursor:pointer;opacity:.45;font-size:11px;margin-inline-start:8px;padding:0;color:inherit}
+#msgs .msg:hover .md{opacity:1}
 </style>
 </head>
 <body>
@@ -585,11 +587,11 @@ table{min-width:720px}
 <aside class="chat-side">
 <label style="font-size:13px;font-weight:700;color:#475569">Your name</label>
 <div class="add-row" style="margin-top:6px"><input id="chatMyName" placeholder="Enter your name"><button class="btn primary sm" id="saveNameBtn">Save</button></div>
-<h4 style="margin:14px 0 8px;color:#9d174d">🟢 Online</h4>
+<h4 id="chatOnlineTitle" style="margin:14px 0 8px;color:#9d174d">🟢 المتصلين</h4>
 <ul id="usersList"></ul>
 </aside>
 <div class="convo">
-<div id="convoHead">💬 Select a person</div>
+<div id="convoHead" style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span id="convoTitle">💬 Select a person</span><button class="btn sm red" id="chatClearBtn" type="button" style="display:none" onclick="clearConversation()">🗑 مسح المحادثة</button></div>
 <div id="msgs"></div>
 <div class="msg-input">
 <input id="msgInput" placeholder="Type your message...">
@@ -1900,7 +1902,7 @@ if(store==='patients')return{id:r.id,name:r.name,age:r.age,husbandName:r.husband
 if(store==='visits')return{id:r.id,patientId:r.patient_id,date:r.date,time:r.time?r.time.slice(0,5):'',visitPurpose:r.visit_purpose,visitType:r.visit_type,notes:r.notes,ts:r.ts};
 if(store==='prescriptions')return{id:r.id,patientId:r.patient_id,patientName:r.patient_name,patientAge:r.patient_age,diagnosis:r.diagnosis,meds:r.meds||[],labs:r.labs||[],date:r.date,ts:r.ts};
 if(store==='labResults')return{id:r.id,patientId:r.patient_id,testName:r.test_name,result:r.result,notes:r.notes,date:r.date,ts:r.ts};
-if(store==='chat')return{id:r.id,from:r.from_id,fromName:r.from_name,to:r.to_id,toName:r.to_name,text:r.text,ts:r.ts,type:'pm'};
+if(store==='chat'){const a=String(r.from_name||'').split(CHAT_SEP),b=String(r.to_name||'').split(CHAT_SEP);return{id:r.id,from:r.from_id,fromName:a[0],fromClient:a[1]||'',to:r.to_id,toName:b[0],toClient:b[1]||'',text:r.text,ts:r.ts,type:'pm'};}
 if(store==='staffProfiles')return{id:r.id,username:r.username,blocked:!!r.blocked,createdAt:r.created_at};
 if(store==='drugPackages')return{id:r.id,name:r.name,drugs:r.drugs||[],createdAt:r.created_at};
 if(store==='medicalFiles')return{id:r.id,patientId:r.patient_id,comment:r.comment||'',timestamp:r.timestamp||Date.now(),data:r.data||{}};
@@ -1912,7 +1914,7 @@ if(store==='patients')return{id:p.id,name:p.name,age:p.age?+p.age:null,husband_n
 if(store==='visits')return{id:p.id,patient_id:p.patientId,date:p.date||null,time:p.time||null,visit_purpose:p.visitPurpose||'',visit_type:p.visitType||'',notes:p.notes||'',ts:p.ts||Date.now()};
 if(store==='prescriptions')return{id:p.id,patient_id:p.patientId,patient_name:p.patientName,patient_age:p.patientAge?+p.patientAge:null,diagnosis:p.diagnosis||'',meds:p.meds||[],labs:p.labs||[],date:p.date||null,ts:p.ts||Date.now()};
 if(store==='labResults')return{id:p.id,patient_id:p.patientId,test_name:p.testName||'',result:p.result||'',notes:p.notes||'',date:p.date||null,ts:p.ts||Date.now()};
-if(store==='chat')return{id:p.id,from_id:p.from,from_name:p.fromName,to_id:p.to,to_name:p.toName,text:p.text,ts:p.ts||Date.now()};
+if(store==='chat')return{id:p.id,from_id:p.from,from_name:(p.fromName||'')+(p.fromClient?CHAT_SEP+p.fromClient:''),to_id:p.to,to_name:(p.toName||'')+(p.toClient?CHAT_SEP+p.toClient:''),text:p.text,ts:p.ts||Date.now()};
 if(store==='staffProfiles')return{id:p.id,username:p.username,blocked:!!p.blocked,created_at:p.createdAt||Date.now()};
 if(store==='drugPackages')return{id:p.id,name:p.name,drugs:p.drugs||[],created_at:p.createdAt||Date.now()};
 if(store==='drugLibrary')return{id:p.id,drug_name:p.name||'',dose:p.dose||'',notes:p.notes||'',created_by:p.createdBy||null,created_at:p.createdAt||new Date().toISOString(),updated_at:p.updatedAt||new Date().toISOString()};
@@ -4441,7 +4443,8 @@ $('statsGeneral').innerHTML=[['Total Patients',data.patients.length],['Total Vis
 if(globalCounts.prescriptions===null)refreshGlobalCounts();
 }
 function monthLabel(m){try{const[y,mm]=m.split('-');return new Date(+y,+mm-1,1).toLocaleDateString('en-US',{month:'long',year:'numeric'});}catch(e){return m;}}
-let users=[],activePeer=null,unread={};
+const CHAT_SEP='\u2063';
+let users=[],activePeer=null,unread={},unreadUid={};
 let __ac=null;
 const BASE_TITLE=document.title;
 document.addEventListener('click',()=>{
@@ -4455,6 +4458,7 @@ function beep(){
   g.gain.exponentialRampToValueAtTime(.001,__ac.currentTime+.35);
   o.start();o.stop(__ac.currentTime+.35);}catch(e){}
 }
+function myChatName(){return myName||(currentUser&&currentUser.username)||'Me';}
 function updateChatBadge(){
   const n=Object.values(unread).reduce((a,b)=>a+b,0);
   const b=$('chatBadge');if(b)b.textContent=n||'';
@@ -4462,40 +4466,70 @@ function updateChatBadge(){
 }
 function setPresenceUsers(st){
   const seen={};
-  users=Object.values(st).flat().filter(u=>u.userId&&u.userId!==(currentUser&&currentUser.id)&&!seen[u.userId]&&(seen[u.userId]=1));
+  users=Object.values(st).flat().filter(u=>u&&u.clientId&&u.clientId!==clientId&&!seen[u.clientId]&&(seen[u.clientId]=1));
   renderUsers();
+}
+function chatPeers(){
+  if(!currentUser)return[];
+  const peers=[],acc=new Set();
+  users.forEach(u=>{peers.push({key:'c:'+u.clientId,userId:u.userId,clientId:u.clientId,name:u.name||u.username||'User',username:u.username||'',online:true});acc.add(u.userId);});
+  (data.staffProfiles||[]).forEach(s=>{if(s.id===currentUser.id||s.blocked||acc.has(s.id))return;peers.push({key:'u:'+s.id,userId:s.id,clientId:'',name:s.username,username:s.username,online:false});});
+  return peers;
+}
+function sentByMe(m){return m.fromClient?m.fromClient===clientId:m.from===currentUser.id;}
+function inConvo(m,p){
+  if(!currentUser||!p)return false;
+  const me=currentUser.id;
+  if(sentByMe(m)){
+    if(m.to!==p.userId)return false;
+    return p.clientId?(!m.toClient||m.toClient===p.clientId):true;
+  }
+  if(m.from!==p.userId||m.to!==me)return false;
+  if(m.toClient&&m.toClient!==clientId)return false;
+  return p.clientId?(!m.fromClient||m.fromClient===p.clientId):true;
+}
+function unreadKeys(p){
+  return Object.keys(unread).filter(k=>unreadUid[k]===p.userId&&(!p.clientId||k==='c:'+p.clientId||k==='u:'+p.userId));
 }
 function renderUsers(){
   const box=$('usersList');if(!box||!currentUser)return;
-  const on=new Set(users.map(u=>u.userId));
-  const list=(data.staffProfiles||[])
-    .filter(s=>s.id!==currentUser.id&&!s.blocked)
-    .sort((a,b)=>(on.has(b.id)-on.has(a.id))||String(a.username).localeCompare(b.username));
-  box.innerHTML=list.length?list.map(s=>`<li class="user-item ${activePeer&&activePeer.userId===s.id?'active':''}" onclick="openConvo('${s.id}')"><span class="dot" style="background:${on.has(s.id)?'#22c55e':'#cbd5e1'}"></span><span style="flex:1">${esc(s.username)}</span>${unread[s.id]?`<span class="badge">${unread[s.id]}</span>`:''}</li>`).join('')
-    :'<li class="empty" style="padding:12px">No other accounts</li>';
+  const peers=chatPeers();
+  peers.sort((a,b)=>(b.online-a.online)||String(a.name).localeCompare(String(b.name)));
+  const t=$('chatOnlineTitle');if(t)t.textContent='🟢 المتصلين ('+users.length+')';
+  box.innerHTML=
+   `<li style="font-size:12px;color:#64748b;padding:4px 6px 8px">أنت: <b>${esc(myChatName())}</b> (${esc(currentUser.username)})</li>`+
+   (peers.length?peers.map(p=>{
+    const n=unreadKeys(p).reduce((s,k)=>s+unread[k],0);
+    const sameAcc=p.userId===currentUser.id;
+    const sub=p.online?(sameAcc?'نفس حسابك':'حساب: '+esc(p.username)):'غير متصل';
+    const act=activePeer&&activePeer.key===p.key;
+    return `<li class="user-item ${act?'active':''}" onclick="openConvo('${esc(p.key)}')"><span class="dot" style="background:${p.online?'#22c55e':'#cbd5e1'}"></span><span style="flex:1;min-width:0"><b>${esc(p.name)}</b><div style="font-size:11px;color:#94a3b8">${sub}</div></span>${n?`<span class="badge">${n}</span>`:''}</li>`;
+   }).join(''):'<li class="empty" style="padding:12px">لا يوجد أحد متصل</li>');
   updateChatBadge();
 }
-function openConvo(userId){
-  const s=(data.staffProfiles||[]).find(x=>x.id===userId);if(!s)return;
-  activePeer={userId:s.id,name:s.username,username:s.username};
-  unread[userId]=0;
-  $('convoHead').textContent='💬 With: '+s.username;
+function openConvo(key){
+  const p=chatPeers().find(x=>x.key===key)||(activePeer&&activePeer.key===key?activePeer:null);
+  if(!p)return;
+  activePeer=p;
+  unreadKeys(p).forEach(k=>{delete unread[k];delete unreadUid[k];});
+  $('convoTitle').textContent='💬 '+p.name+(p.online?'':' (غير متصل)');
+  $('chatClearBtn').style.display='inline-block';
   renderMsgs();renderUsers();$('msgInput').focus();
 }
 function renderMsgs(){
   const box=$('msgs');if(!box)return;
   if(!activePeer||!currentUser){box.innerHTML='<div class="empty">Select a person</div>';return;}
-  const me=currentUser.id,peer=activePeer.userId;
-  const list=data.chat.filter(m=>(m.from===me&&m.to===peer)||(m.from===peer&&m.to===me)).sort((a,b)=>(a.ts||0)-(b.ts||0));
-  box.innerHTML=list.map(m=>{const mine=m.from===me;
-    return `<div class="msg ${mine?'me':'them'}">${esc(m.text)}<span class="mt">${esc(mine?'Me':(m.fromName||''))} • ${new Date(m.ts||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}</span></div>`;
-  }).join('')||'<div class="empty">Start conversation</div>';
+  const list=data.chat.filter(m=>inConvo(m,activePeer)).sort((a,b)=>(a.ts||0)-(b.ts||0));
+  box.innerHTML=list.map(m=>{const mine=sentByMe(m);
+    return `<div class="msg ${mine?'me':'them'}">${esc(m.text)}<span class="mt">${esc(mine?'أنا':(m.fromName||''))} • ${new Date(m.ts||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}<button type="button" class="md" title="حذف الرسالة" onclick="delMsg('${esc(m.id)}')">🗑</button></span></div>`;
+  }).join('')||'<div class="empty">ابدأ المحادثة</div>';
   box.scrollTop=box.scrollHeight;
 }
 function receivePM(m){
-  if(!currentUser||m.to!==currentUser.id||m.from===currentUser.id)return;
-  const open=!$('tab-chat').hidden&&activePeer&&activePeer.userId===m.from&&document.visibilityState==='visible';
-  if(open){renderMsgs();}else{unread[m.from]=(unread[m.from]||0)+1;renderUsers();}
+  if(!currentUser)return;
+  if(m.to!==currentUser.id||(m.toClient&&m.toClient!==clientId)||sentByMe(m))return;
+  if(activePeer&&inConvo(m,activePeer)&&!$('tab-chat').hidden&&document.visibilityState==='visible'){renderMsgs();}
+  else{const k=m.fromClient?'c:'+m.fromClient:'u:'+m.from;unread[k]=(unread[k]||0)+1;unreadUid[k]=m.from;renderUsers();}
   const name=m.fromName||'Message';
   toast('💬 '+name+': '+String(m.text).slice(0,60));
   beep();
@@ -4506,7 +4540,35 @@ async function sendMsg(){
   if(!activePeer){toast('⚠ اختار شخص الأول');return;}
   if(!text||!currentUser)return;
   input.value='';
-  await dbPut('chat',{id:uid(),from:currentUser.id,fromName:currentUser.username,to:activePeer.userId,toName:activePeer.name||'',text,ts:Date.now()});
+  await dbPut('chat',{id:uid(),from:currentUser.id,fromName:myChatName(),fromClient:clientId,to:activePeer.userId,toName:activePeer.name||'',toClient:activePeer.clientId||'',text,ts:Date.now()});
+}
+async function chatDeleteRows(ids){
+  const removed=data.chat.filter(m=>ids.includes(m.id));
+  data.chat=data.chat.filter(m=>!ids.includes(m.id));
+  renderMsgs();
+  try{
+    const{data:del,error}=await sb.from('chat_messages').delete().in('id',ids).select('id');
+    if(error)throw error;
+    const ok=new Set((del||[]).map(r=>r.id));
+    const failed=removed.filter(m=>!ok.has(m.id));
+    if(failed.length){data.chat.push(...failed);renderMsgs();
+      toast('❌ السيرفر منع حذف '+failed.length+' رسالة — فعّل سياسة الحذف (SQL) على chat_messages');return false;}
+    return true;
+  }catch(e){
+    data.chat.push(...removed);renderMsgs();
+    toast('❌ فشل الحذف: '+(e.message||''));return false;
+  }
+}
+async function delMsg(id){
+  if(!confirm('حذف الرسالة دي؟ هتتمسح عند الطرفين.'))return;
+  if(await chatDeleteRows([id]))toast('🗑 اتحذفت');
+}
+async function clearConversation(){
+  if(!activePeer)return;
+  const ids=data.chat.filter(m=>inConvo(m,activePeer)).map(m=>m.id);
+  if(!ids.length){toast('المحادثة فاضية');return;}
+  if(!confirm('مسح كل رسائل المحادثة دي ('+ids.length+')؟ هتتمسح عند الطرفين ومينفعش ترجع.'))return;
+  if(await chatDeleteRows(ids))toast('🗑 تم مسح المحادثة');
 }
 function saveMyName(){myName=$('chatMyName').value.trim();localStorage.setItem(LS_NAME,myName);if(online&&ch)ch.track({clientId,userId:currentUser?.id||'',username:currentUser?.username||'',name:myName||currentUser?.username||'Unknown'});toast('✅ Saved');}
 function renderSettings(){
