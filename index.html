@@ -2,7 +2,38 @@
 <html lang="ar" dir="rtl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#be185d">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="format-detection" content="telephone=no">
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="preconnect" href="https://hjjriftdklhqhadnxgbe.supabase.co" crossorigin>
+<script id="device-detect">
+/* Smart device detection — runs before first paint (no flash of the wrong layout) */
+window.__uiDetect=function(){
+ var ua=navigator.userAgent||'',m='auto';
+ var ipad=/iPad/i.test(ua)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+ var androidTab=/Android/i.test(ua)&&!/Mobile/i.test(ua);
+ var tablet=ipad||androidTab||/Tablet/i.test(ua);
+ var phone=!tablet&&(/iPhone|iPod|Android.+Mobile|Windows Phone|Mobile/i.test(ua));
+ var w=Math.min(window.innerWidth||1024,(screen&&screen.width)||9999);
+ var auto=(phone||(!tablet&&w<768))?'mobile':'desktop';
+ var touch=tablet||phone||(window.matchMedia&&matchMedia('(pointer:coarse)').matches);
+ return{mode:m,auto:auto,device:m==='auto'?auto:m,touch:!!touch,phone:!!phone,tablet:!!tablet};
+};
+(function(){try{
+ var r=window.__uiDetect(),d=document.documentElement;
+ d.setAttribute('data-device',r.device);d.setAttribute('data-uimode',r.mode);
+ if(r.touch)d.setAttribute('data-touch','1');
+ /* user forced the desktop layout on a phone -> render at desktop width */
+ if(r.device==='desktop'&&r.mode==='desktop'&&(r.phone||(window.innerWidth||1024)<700)){
+  var v=document.querySelector('meta[name=viewport]');if(v)v.setAttribute('content','width=1100');
+ }
+}catch(e){}})();
+</script>
+
 <title>⚕ Dr. Hossam Etman</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.49.4/dist/umd/supabase.js"></script>
 <style>
@@ -766,6 +797,16 @@ table{min-width:720px}
 <div class="acc-head" onclick="toggleAcc('accHistory')"><h4>🩺 History</h4><span class="acc-ic" id="ic-accHistory">▾</span></div>
 <div class="acc-body" id="accHistory" style="display:none">
 <div class="acc nested pf-base-el">
+<div class="acc-head" onclick="toggleAcc('accPfInBody')"><h4>InBody</h4><span class="acc-ic" id="ic-accPfInBody">▾</span></div>
+<div class="acc-body" id="accPfInBody" style="display:none">
+<label class="flabel">الطول (سم) / Height cm</label>
+<input id="og_pfInbHeight" class="og-input" type="text" inputmode="decimal" placeholder="165" oninput="calcInBodyPf()">
+<label class="flabel">الوزن (كجم) / Weight kg</label>
+<input id="og_pfInbWeight" class="og-input" type="text" inputmode="decimal" placeholder="72" oninput="calcInBodyPf()">
+<div id="pfInbOut" style="margin-top:10px;padding:12px;border-radius:10px;background:#f0fdfa;border:1.5px solid #5eead4;font-size:16px;line-height:1.8;display:none"></div>
+</div>
+</div>
+<div class="acc nested pf-base-el">
 <div class="acc-head" onclick="toggleAcc('accMenstrual')"><h4>📅 Menstrual History</h4><span class="acc-ic" id="ic-accMenstrual">▾</span></div>
 <div class="acc-body" id="accMenstrual" style="display:none">
 <div class="og-row">
@@ -1018,6 +1059,16 @@ table{min-width:720px}
 <input id="og_antBp" class="og-input" placeholder="e.g. 120/80">
 <label class="flabel">Wt</label>
 <input id="og_antWt" class="og-input" type="text" inputmode="decimal" placeholder="e.g. 72 kg">
+</div>
+</div>
+<div class="acc nested visit-only-acc" data-visit-types="Antenatal,Gynae,Folliculometry,Blank">
+<div class="acc-head" onclick="toggleAcc('accInBody')"><h4>InBody</h4><span class="acc-ic" id="ic-accInBody">▾</span></div>
+<div class="acc-body" id="accInBody" style="display:none">
+<label class="flabel">الطول (سم) / Height cm</label>
+<input id="og_inbHeight" class="og-input" type="text" inputmode="decimal" placeholder="165" oninput="calcInBody()">
+<label class="flabel">الوزن (كجم) / Weight kg</label>
+<input id="og_inbWeight" class="og-input" type="text" inputmode="decimal" placeholder="72" oninput="calcInBody()">
+<div id="inbOut" style="margin-top:10px;padding:12px;border-radius:10px;background:#f0fdfa;border:1.5px solid #5eead4;font-size:16px;line-height:1.8;display:none"></div>
 </div>
 </div>
 <div class="acc nested visit-only-acc" data-visit-types="Blank">
@@ -1278,6 +1329,7 @@ function vtKind(t){const s=String(t??'').trim().toLowerCase();if(!s)return'';if(
 function isNewVisit(t){return vtKind(t)==='new';}
 function isFollowupVisit(t){return vtKind(t)==='followup';}
 const VT_FOLLOWUP_VALUE='متابعه';
+function normAr(s){return String(s==null?'':s).toLowerCase().replace(/[\u064B-\u065F\u0670\u0640]/g,'').replace(/[أإآٱ]/g,'ا').replace(/ى/g,'ي').replace(/ة/g,'ه').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/\s+/g,' ').trim();}
 function todayStr(){const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
 function nowTime(){return new Date().toTimeString().slice(0,5);}
 function addDays(ds,n){const d=new Date(ds+'T00:00:00');d.setDate(d.getDate()+n);return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');}
@@ -1303,11 +1355,31 @@ const clean={name:name,dose:dose,note:String(drug.note||'').trim()};
 if(existing>=0){saved[existing]={...saved[existing],...clean};}else{saved.push(clean);}
 localStorage.setItem(LS_DRUGS,JSON.stringify(saved));
 }
+const LS_DRUGS_CACHE='clinic-drug-lib-cache-v2';
+function drugFromRow(r){return{id:r.id,name:r.drug_name||'',dose:r.dose||'',note:r.notes||'',createdBy:r.created_by||null,createdAt:r.created_at,updatedAt:r.updated_at};}
+function drugRowStamp(r){const t=Date.parse(r.updated_at||r.created_at||'');return isNaN(t)?0:t;}
 async function loadDrugLibrary(){
 try{
-const {data:rows,error}=await sb.from('drug_library').select('*').order('drug_name',{ascending:true}).order('dose',{ascending:true});
+/* egress-saver: reuse the cached library and only download rows changed since the last sync (full refresh every 7 days) */
+let cache=null;try{cache=JSON.parse(localStorage.getItem(LS_DRUGS_CACHE)||'null');}catch(_){}
+const FULL_MS=7*864e5;
+let rows,fullAt;
+if(cache&&cache.url===SUPABASE_URL&&Array.isArray(cache.rows)&&cache.rows.length&&cache.stamp&&(Date.now()-(cache.fullAt||0))<FULL_MS){
+const iso=new Date(cache.stamp).toISOString();
+const {data:delta,error}=await sb.from('drug_library').select('*').or('updated_at.gte.'+iso+',created_at.gte.'+iso);
 if(error) throw error;
-sharedDrugLibrary=(rows||[]).map(r=>({id:r.id,name:r.drug_name||'',dose:r.dose||'',note:r.notes||'',createdBy:r.created_by||null,createdAt:r.created_at,updatedAt:r.updated_at}));
+const map=new Map(cache.rows.map(r=>[r.id,r]));
+(delta||[]).forEach(r=>map.set(r.id,r));
+rows=[...map.values()];fullAt=cache.fullAt;
+}else{
+const {data:all,error}=await sb.from('drug_library').select('*').order('drug_name',{ascending:true}).order('dose',{ascending:true});
+if(error) throw error;
+rows=all||[];fullAt=Date.now();
+}
+rows.sort((x,y)=>String(x.drug_name||'').localeCompare(String(y.drug_name||''))||String(x.dose||'').localeCompare(String(y.dose||'')));
+sharedDrugLibrary=rows.map(drugFromRow);
+data.drugLibrary=rows.map(r=>({id:r.id,name:r.drug_name||'',dose:r.dose||'',notes:r.notes||'',createdAt:r.created_at,updatedAt:r.updated_at,createdBy:r.created_by}));
+try{localStorage.setItem(LS_DRUGS_CACHE,JSON.stringify({url:SUPABASE_URL,fullAt:fullAt,stamp:rows.reduce((m,r)=>Math.max(m,drugRowStamp(r)),0),rows:rows}));}catch(_){}
 localStorage.setItem(LS_DRUGS,JSON.stringify(sharedDrugLibrary.map(d=>({name:d.name,dose:d.dose,note:d.note}))));
 }catch(error){console.error('Drug Library load failed:',error);sharedDrugLibrary=getSavedDrugs();}
 return sharedDrugLibrary;
@@ -1728,6 +1800,7 @@ return code==='PGRST301'||code==='401'||msg.includes('jwt expired')||msg.include
 ||msg.includes('refresh_token_not_found')||msg.includes('token has expired')||msg.includes('session_not_found');
 }
 async function clearStaleSession(){
+try{await idbClearAll();}catch(_){}
 try{await sb.auth.signOut({scope:'local'});}catch(_){}
 try{const ref=SUPABASE_URL.replace(/^https?:\/\//,'').split('.')[0];localStorage.removeItem('sb-'+ref+'-auth-token');}catch(_){}
 }
@@ -1826,6 +1899,7 @@ toast('✅ Admin created');bootstrapMode=false;await afterLogin(sdata.session);
 }
 async function doLogout(){
 await unsubscribeRealtime();
+await idbClearAll();
 try{await sb.auth.signOut();}catch(e){}
 currentUser=null;
 resetClientData();
@@ -1837,13 +1911,68 @@ function setStatus(state){const el=$('connStatus');if(state==='online'){el.textC
 $('connStatus').onclick=()=>{rtHeartbeat();toast(rtSummary());};
 let visitsRecordsLoaded=false;
 let data={patients:[],visits:[],prescriptions:[],labResults:[],chat:[],staffProfiles:[],medicalFiles:[],drugPackages:[],drugLibrary:[],settings:{clinicName:'',examPrice:0,followupPrice:0,sources:[],visitPurposes:[],rxLabTests:[]}};
+function qTable(table){
+ let q=sb.from(table).select('*');
+ if(table==='chat_messages')q=q.gte('ts',Date.now()-14*864e5).order('ts',{ascending:false}).limit(200);
+ return q;
+}
+function qRows(table,rows){return table==='chat_messages'?(rows||[]).slice().reverse():(rows||[]);}
+const IDB_NAME='clinic-cache',IDB_STORE='kv';
+function idbOpen(){return new Promise((res,rej)=>{if(!window.indexedDB)return rej(new Error('no idb'));const r=indexedDB.open(IDB_NAME,1);r.onupgradeneeded=()=>r.result.createObjectStore(IDB_STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error);});}
+async function idbGet(k){const db=await idbOpen();return new Promise((res,rej)=>{const q=db.transaction(IDB_STORE).objectStore(IDB_STORE).get(k);q.onsuccess=()=>{db.close();res(q.result);};q.onerror=()=>{db.close();rej(q.error);};});}
+async function idbSet(k,v){const db=await idbOpen();return new Promise((res,rej)=>{const t=db.transaction(IDB_STORE,'readwrite');t.objectStore(IDB_STORE).put(v,k);t.oncomplete=()=>{db.close();res();};t.onerror=()=>{db.close();rej(t.error);};});}
+async function idbClearAll(){try{const db=await idbOpen();await new Promise(res=>{const t=db.transaction(IDB_STORE,'readwrite');t.objectStore(IDB_STORE).clear();t.oncomplete=()=>{db.close();res();};t.onerror=()=>{db.close();res();};});}catch(_){}}
+/* paged read: Supabase returns at most ~1000 rows per request, so never rely on a single select */
+async function pagedRows(build){
+const PAGE=window.__SB_PAGE||1000;let out=[];
+for(let from=0;;from+=PAGE){
+const{data:rows,error}=await build().order('id',{ascending:true}).range(from,from+PAGE-1);
+if(error)return{data:null,error};
+out=out.concat(rows||[]);
+if(!rows||rows.length<PAGE)break;
+}
+return{data:out,error:null};
+}
+/* patients + visits: cached snapshot + only rows changed since (needs updated_at, see clinic_delta_sync.sql); falls back to a full paged load */
+async function fetchRows(table){
+if(table!=='patients'&&table!=='visits')return qTable(table);
+const key='snap:'+SUPABASE_URL+':'+(currentUser&&currentUser.id||'');
+let snap=null;try{snap=await idbGet(key);}catch(_){}
+const c=snap&&snap.t&&snap.t[table];
+const keep=async(rows,fullAt)=>{
+try{
+const cur=(await idbGet(key))||{t:{}};
+cur.t=cur.t||{};
+cur.t[table]={rows:rows,fullAt:fullAt,stamp:rows.reduce((m,r)=>{const t=Date.parse(r.updated_at||'');return isNaN(t)?m:Math.max(m,t);},0)};
+await idbSet(key,cur);
+}catch(_){}
+};
+if(c&&Array.isArray(c.rows)&&c.rows.length&&c.stamp&&(Date.now()-(c.fullAt||0))<7*864e5){
+try{
+const iso=new Date(c.stamp).toISOString();
+const[d,ids]=await Promise.all([pagedRows(()=>sb.from(table).select('*').gte('updated_at',iso)),pagedRows(()=>sb.from(table).select('id'))]);
+if(!d.error&&!ids.error){
+const alive=new Set((ids.data||[]).map(r=>r.id));
+const map=new Map();
+c.rows.forEach(r=>{if(alive.has(r.id))map.set(r.id,r);});
+(d.data||[]).forEach(r=>map.set(r.id,r));
+const rows=[...map.values()];
+await keep(rows,c.fullAt);
+return{data:rows,error:null};
+}
+}catch(e){console.warn('delta sync failed, doing a full load',e);}
+}
+const full=await pagedRows(()=>sb.from(table).select('*'));
+if(!full.error&&full.data&&full.data.length&&full.data[0].updated_at!==undefined)await keep(full.data,Date.now());
+return full;
+}
 async function loadAll(){
-data.prescriptions=[];data.labResults=[];data.medicalFiles=[];visitsRecordsLoaded=false;
+data.prescriptions=[];data.labResults=[];data.medicalFiles=[];visitsRecordsLoaded=false;try{loadedVisitPatients.clear();}catch(_){}
 const tables=[['patients','patients'],['visits','visits'],['chat','chat_messages'],['staffProfiles','staff_profiles'],['drugPackages','drug_packages']];
 for(const[store,table]of tables){
-const{data:rows,error}=await sb.from(table).select('*');
+const{data:rows,error}=await fetchRows(table);
 if(error)throw error;
-data[store]=(rows||[]).map(r=>fromRow(store,r));
+data[store]=qRows(table,rows).map(r=>fromRow(store,r));
 }
 const{data:setRows,error:setErr}=await sb.from('settings').select('*');
 if(setErr)throw setErr;
@@ -1998,7 +2127,8 @@ rtPaint();
 }
 function handleRealtimeChange(table,store,payload){
 if(table==='settings'){if(payload.eventType==='DELETE')return;data.settings[payload.new.key]=payload.new.value;renderAll();return;}
-if(payload.eventType==='DELETE'){data[store]=data[store].filter(r=>r.id!==payload.old.id);}
+if(payload.eventType==='DELETE'){data[store]=data[store].filter(r=>r.id!==payload.old.id);
+if(store==='drugLibrary'){sharedDrugLibrary=sharedDrugLibrary.filter(d=>d.id!==payload.old.id);try{const c=JSON.parse(localStorage.getItem(LS_DRUGS_CACHE)||'null');if(c&&Array.isArray(c.rows)){c.rows=c.rows.filter(r=>r.id!==payload.old.id);localStorage.setItem(LS_DRUGS_CACHE,JSON.stringify(c));}}catch(_){}}}
 else{
 const rec=fromRow(store,payload.new);
 const arr=data[store];
@@ -2006,7 +2136,7 @@ if(!arr)return;
 const i=arr.findIndex(r=>r.id===rec.id);
 if(i>=0){arr[i]=rec;}else{arr.push(rec);}
 if(store==='drugLibrary'){
-sharedDrugLibrary=arr.slice();
+sharedDrugLibrary=arr.map(d=>({id:d.id,name:d.name||'',dose:d.dose||'',note:(d.note!==undefined?d.note:d.notes)||'',createdBy:d.createdBy||null,createdAt:d.createdAt,updatedAt:d.updatedAt}));
 localStorage.setItem(LS_DRUGS,JSON.stringify(sharedDrugLibrary.map(d=>({name:d.name,dose:d.dose,note:d.note}))));
 }
 if(store==='chat'&&payload.eventType==='INSERT'){receivePM(rec);}
@@ -2048,7 +2178,7 @@ console.error('Presence channel failed:',status,err);
 setTimeout(()=>{if(gen===rtGen&&currentUser&&ch===pc){try{sb.removeChannel(pc);}catch(e){}subscribeRealtimePresenceOnly(gen);}},8000);
 }
 });
-clearInterval(rtHb);rtHeartbeat();rtHb=setInterval(rtHeartbeat,15000);
+clearInterval(rtHb);rtHeartbeat();rtHb=setInterval(()=>{if(!document.hidden)rtHeartbeat();},240000);
 }
 function subscribeRealtimePresenceOnly(gen){
 if(gen!==rtGen||!currentUser)return;
@@ -2066,14 +2196,34 @@ async function rtResync(){
  try{
   const oldChat=new Set((data.chat||[]).map(m=>m.id));
   const jobs=[['patients','patients'],['visits','visits'],['chat','chat_messages'],['staffProfiles','staff_profiles'],['drugPackages','drug_packages']];
-  for(const [store,table] of jobs){const {data:rows,error}=await sb.from(table).select('*');if(!error&&rows)data[store]=rows.map(r=>fromRow(store,r));}
+  for(const [store,table] of jobs){const {data:rows,error}=await fetchRows(table);if(!error&&rows)data[store]=qRows(table,rows).map(r=>fromRow(store,r));}
   const {data:sr,error:se}=await sb.from('settings').select('*');
   if(!se&&sr)sr.forEach(r=>{data.settings[r.key]=r.value;});
   if(typeof filePatient!=='undefined'&&filePatient){loadedPatientRecords.delete(filePatient.id);await loadPatientRecords(filePatient.id);}
-  if(visitsRecordsLoaded){visitsRecordsLoaded=false;await loadAllVisitRecords();}
+  loadedVisitPatients.clear();if(!$('tab-visits')?.hidden)renderGlobalSavedVisits();
   (data.chat||[]).filter(m=>!oldChat.has(m.id)).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(m=>{try{receivePM(m);}catch(e){}});
   renderAll();
  }catch(e){console.warn('resync failed',e);}
+}
+async function rtResyncLight(){
+ /* cheap catch-up after a short absence: only recent patients/visits + new chat messages */
+ if(!sb||!currentUser)return;
+ try{
+  const since=new Date(Date.now()-2*864e5).toISOString().slice(0,10);
+  const merge=(store,rows)=>{(rows||[]).forEach(r=>{const rec=fromRow(store,r);const a=data[store];const i=a.findIndex(x=>x.id===rec.id);if(i>=0)a[i]=rec;else a.push(rec);});};
+  const lastChat=(data.chat||[]).reduce((m,x)=>Math.max(m,x.ts||0),0);
+  const oldChat=new Set((data.chat||[]).map(m=>m.id));
+  const [pa,vi,ch]=await Promise.all([
+   sb.from('patients').select('*').gte('date',since),
+   sb.from('visits').select('*').gte('date',since),
+   sb.from('chat_messages').select('*').gt('ts',lastChat).order('ts',{ascending:true}).limit(200)
+  ]);
+  if(!pa.error)merge('patients',pa.data);
+  if(!vi.error)merge('visits',vi.data);
+  if(!ch.error)merge('chat',ch.data);
+  (data.chat||[]).filter(m=>!oldChat.has(m.id)).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(m=>{try{receivePM(m);}catch(e){}});
+  renderAll();
+ }catch(e){console.warn('light resync failed',e);}
 }
 async function rtRebuild(){
  if(rtRebuilding||!currentUser||!sb)return;
@@ -2098,8 +2248,8 @@ function rtWake(){
  if(!currentUser||!sb)return;
  const away=rtHiddenAt?Date.now()-rtHiddenAt:0;rtHiddenAt=0;
  rtHeartbeat();
- if(Object.keys(rtBad).length||away>120000)rtRebuild();
- else if(away>30000)rtResync();
+ if(Object.keys(rtBad).length||away>1800000)rtRebuild();
+ else if(away>30000)rtResyncLight();
 }
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')rtHiddenAt=Date.now();else rtWake();});
 window.addEventListener('focus',rtWake);
@@ -2188,7 +2338,7 @@ function showPatientAC(input){
 const q=input.value.trim();
 if(linkedPatientId&&q.toLowerCase()===(linkedName||'').toLowerCase()){hideAC();return;}
 if(!q){hideAC();clearLink();return;}
-const matches=data.patients.filter(p=>(p.name||'').toLowerCase().includes(q.toLowerCase())).slice(0,10);
+const matches=data.patients.filter(p=>normAr(p.name).includes(normAr(q))).slice(0,10);
 if(!matches.length){hideAC();clearLink();return;}
 if(linkedPatientId)clearLink();
 acItems=matches;acSel=0;acTarget=input;
@@ -2272,13 +2422,23 @@ if(!v.name||!v.age||!v.visitPurpose||!v.visitType){toast('⚠ Complete required 
 let p=editingId?{...(data.patients.find(x=>x.id===editingId)||{id:editingId,createdAt:Date.now(),status:'Waiting'}),...v}:{id:uid(),...pmCarry,...v,status:'Waiting',createdAt:Date.now()};
 const ok=await dbPut('patients',p);if(ok){closeModal('patientModal');toast('✅ Saved');editingId=null;pmCarry={};}
 }
-let patSearch='',patPurpose='',patType='',patDateVal='',patShowAll=false;
+let patSearch='',patPurpose='',patType='',patDateVal='',patShowAll=false,patLimit=10,patSig='';
+const PAT_THEAD_FULL='<tr><th>#</th><th>Name</th><th>Age</th><th>Purpose</th><th>Type</th><th>Status</th><th>Date</th><th>Actions</th></tr>';
+const PAT_THEAD_COMPACT='<tr><th>#</th><th>Name</th><th>Actions</th></tr>';
+function patGoVisits(id){const t=document.querySelector('.tab[data-tab="visits"]');if(t)t.click();showPatientVisits(id);}
+function patMoreUI(total,shown){
+let w=$('patMoreWrap');
+if(!w){const host=$('patBody').closest('table').parentElement;w=document.createElement('div');w.id='patMoreWrap';w.style.cssText='text-align:center;padding:12px 0 2px';host.insertAdjacentElement('afterend',w);}
+if(!total){w.innerHTML='';return;}
+w.innerHTML='<div style="font-size:13px;color:#64748b;margin-bottom:8px">عرض '+shown+' من '+total+'</div>'+(shown<total?'<button class="btn blue" id="patMoreBtn" type="button">المزيد (باقي '+(total-shown)+')</button>':'');
+const b=$('patMoreBtn');if(b)b.onclick=()=>{patLimit+=10;renderPatients();};
+}
 function filteredPatients(){
 let list=[...data.patients];
 if(patSearch){
-const q=patSearch.trim().toLowerCase().replace(/\s+/g,' ');
+const q=normAr(patSearch);
 list=list.filter(p=>{
-const name=(p.name||'').toLowerCase().replace(/\s+/g,' ');
+const name=normAr(p.name||'');
 const phone=(p.phone||'').toLowerCase().replace(/\s+/g,'');
 return name.includes(q)||phone.includes(q.replace(/\s+/g,''));
 });
@@ -2304,6 +2464,16 @@ $('patType').innerHTML='<option value="">All types</option>'+visitTypeOptions().
 $('patScopeLbl').textContent=patDateVal?('Patients on '+fmtDate(patDateVal)):(patShowAll?'All records':"Today's cases");
 const list=filteredPatients();
 $('stTodayCases').textContent=list.length;
+const patCompact=patShowAll&&!patDateVal;
+const patSigNow=[patSearch,patPurpose,patType,patDateVal,patShowAll].join('|');if(patSigNow!==patSig){patSig=patSigNow;patLimit=10;}
+const patHead=$('patBody').closest('table').querySelector('thead');const wantHead=patCompact?PAT_THEAD_COMPACT:PAT_THEAD_FULL;if(patHead&&patHead.innerHTML!==wantHead)patHead.innerHTML=wantHead;
+if(patCompact){
+const shown=list.slice(0,patLimit);
+$('patBody').innerHTML=shown.length?shown.map((p,i)=>`<tr><td>${i+1}</td><td><b style="cursor:pointer;color:#be185d" onclick="openPatientFile('${p.id}')">${esc(p.name)}</b></td><td><button class="btn sm blue" onclick="openPatientFile('${p.id}')">الملف الطبي</button> <button class="btn sm gray" onclick="openPatientModal('${p.id}')">تعديل</button> <button class="btn sm primary" onclick="patGoVisits('${p.id}')">الزيارات</button></td></tr>`).join(''):'<tr><td colspan="3" class="empty">No patients</td></tr>';
+patMoreUI(list.length,shown.length);
+return;
+}
+patMoreUI(0,0);
 $('patBody').innerHTML=list.length?list.map((p,i)=>`<tr><td>${i+1}</td><td><b style="cursor:pointer;color:#be185d" onclick="openPatientFile('${p.id}')">${esc(p.name)}</b></td><td>${esc(p.age)}</td><td>${esc(p.visitPurpose||'—')}</td><td><span class="chip ${isNewVisit(p.visitType)?'exam':'followup'}">${esc(p.visitType||'—')}</span></td><td><span class="chip ${p.status==='Done'?'done':(p.status==='Called'?'call':'wait')}">${esc(p.status||'—')}</span></td><td>${esc(p.date||'—')}</td><td><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁</button> <button class="btn sm blue" onclick="openPatientModal('${p.id}')">✏️</button> <button class="btn sm red" onclick="delPatient('${p.id}')">🗑</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">No patients</td></tr>';
 }
 function resetPatFilters(){patSearch='';if($('patSearchInp'))$('patSearchInp').value='';patPurpose='';patType='';patDateVal='';patShowAll=false;$('patDate').value='';$('patShowAll').checked=false;renderPatients();}
@@ -2356,7 +2526,7 @@ function searchMedicalFilePatients(){
  if(!box)return;
  if(!term&&!dateVal){box.innerHTML='';return;}
  let matches=[...(data.patients||[])];
- if(term)matches=matches.filter(p=>String(p.name||'').toLowerCase().includes(term));
+ if(term)matches=matches.filter(p=>normAr(p.name).includes(normAr(term)));
  if(dateVal)matches=matches.filter(p=>p.date===dateVal);
  matches=matches.slice(0,25);
  if(!matches.length){box.innerHTML='<div class="muted" style="padding:8px">لا توجد نتائج</div>';return;}
@@ -2401,13 +2571,40 @@ function startVisitType(type){
   enterNewVisit(type);
 }
 const VISIT_TYPE_ICONS={Antenatal:'🤰',Gynae:'🩺',Folliculometry:'🔬',Blank:'📝'};
+function inbLast(excludeId){
+  if(typeof filePatient==='undefined'||!filePatient)return null;
+  const list=(data.medicalFiles||[]).filter(mf=>mf.patientId===filePatient.id&&mf.id!==excludeId&&mf.data&&mf.data.visit&&mf.data.visit.inbody&&mf.data.visit.inbody.weight)
+    .map(mf=>({h:mf.data.visit.inbody.height,w:mf.data.visit.inbody.weight,d:mf.data.visit.visitDate||'',t:mf.timestamp||0}))
+    .sort((x,y)=>String(y.d).localeCompare(String(x.d))||y.t-x.t);
+  if(list[0])return list[0];
+  const bs=filePatient.ogHistory&&filePatient.ogHistory.inbody;
+  return bs&&bs.weight?{h:bs.height,w:bs.weight,d:'الملف الطبي'}:null;
+}
+function inbRender(hId,wId,outId,trend){
+  const num=v=>parseFloat(String(v==null?'':v).replace(',','.').replace(/[٠-٩]/g,d=>'٠١٢٣٤٥٦٧٨٩'.indexOf(d)));
+  const hEl=$(hId),wEl=$(wId),out=$(outId);
+  const res={height:hEl?hEl.value:'',weight:wEl?wEl.value:'',bmi:'',cat:'',ideal:''};
+  const h=num(res.height),w=num(res.weight);
+  if(!(h>50&&h<250&&w>10&&w<400)){if(out){out.style.display='none';out.innerHTML='';}return res;}
+  const m=h/100,bmi=w/(m*m);
+  const cat=bmi<18.5?'نحافة':bmi<25?'وزن طبيعي':bmi<30?'وزن زائد':bmi<35?'سمنة درجة 1':bmi<40?'سمنة درجة 2':'سمنة مفرطة';
+  const lo=18.5*m*m,hi=24.9*m*m;
+  const diff=w<lo?'ناقص '+(lo-w).toFixed(1)+' كجم عن الحد الأدنى':w>hi?'زيادة '+(w-hi).toFixed(1)+' كجم عن الحد الأقصى':'ضمن المدى الطبيعي';
+  res.bmi=bmi.toFixed(1);res.cat=cat;res.ideal=lo.toFixed(1)+' - '+hi.toFixed(1)+' kg';
+  let extra='';
+  if(trend){const l=inbLast(typeof editingVisitId!=='undefined'?editingVisitId:null);const lw=l?num(l.w):NaN;if(lw>10){const d=w-lw;extra='<br>الوزن السابق: '+lw+' كجم'+(l.d?' ('+esc(String(l.d))+')':'')+' — الفرق: '+(d>0?'+':'')+d.toFixed(1)+' كجم';}}
+  if(out){out.style.display='block';out.innerHTML='<b>BMI: '+res.bmi+'</b> — '+cat+'<br>الوزن المثالي: '+res.ideal+'<br>'+diff+extra;}
+  return res;
+}
+function calcInBody(){return inbRender('og_inbHeight','og_inbWeight','inbOut',true);}
+function calcInBodyPf(){return inbRender('og_pfInbHeight','og_pfInbWeight','pfInbOut',false);}
 function arrangeNewVisitSections(type){
   const history=$('visitEditArea'); if(!history)return;
-  const map={Antenatal:['accVitals','accComplaint','accInvestigation','accManagement'],Gynae:['accComplaint','accExam','accInvestigation','accImpression','accManagement'],Folliculometry:['accFol','accManagement'],Blank:['accBlank']};
+  const map={Antenatal:['accVitals','accInBody','accComplaint','accInvestigation','accManagement'],Gynae:['accInBody','accComplaint','accExam','accInvestigation','accImpression','accManagement'],Folliculometry:['accInBody','accFol','accManagement'],Blank:['accInBody','accBlank']};
   const wanted=map[type]||[];
-  const all=['accVitals','accBlank','accComplaint','accInvestigation','accExam','accImpression','accFol','accManagement'];
+  const all=['accVitals','accInBody','accBlank','accComplaint','accInvestigation','accExam','accImpression','accFol','accManagement'];
   all.forEach(id=>{const body=$(id);if(body&&body.parentElement){const box=body.parentElement;box.style.display='none';body.style.display='none';const ic=$('ic-'+id);if(ic)ic.textContent='▾';}});
-  wanted.forEach(id=>{const body=$(id);if(!body||!body.parentElement)return;const box=body.parentElement;history.appendChild(box);box.style.display='';body.style.display='block';const ic=$('ic-'+id);if(ic)ic.textContent='▴';});
+  wanted.forEach(id=>{const body=$(id);if(!body||!body.parentElement)return;const box=body.parentElement;{const _bar=$('pfNewVisitBar');if(_bar&&_bar.parentElement===history)history.insertBefore(box,_bar);else history.appendChild(box);}box.style.display='';body.style.display='block';const ic=$('ic-'+id);if(ic)ic.textContent='▴';});
   const extra=$('og_ussAntenatalExtra');if(extra)extra.style.display=type==='Blank'?'none':'';
 }
 function applyVisitTypeVisibility(type){
@@ -2429,6 +2626,7 @@ function enterNewVisit(type){
   ['og_complaint','og_impression','og_blankNotes'].forEach(id=>{if($(id))$(id).value='';});
   if($('og_antBp'))$('og_antBp').value='';
   if($('og_antWt'))$('og_antWt').value='';
+  ['og_inbHeight','og_inbWeight'].forEach(id=>{if($(id))$(id).value='';});{const _l=inbLast(null);if(_l&&_l.h&&$('og_inbHeight'))$('og_inbHeight').value=_l.h;}calcInBody();
   ['og_hsg','og_hsgReason','og_uss','og_ussType','og_ussCrl','og_ussGs','og_ussGa','og_ussFindings'].forEach(id=>{if($(id))$(id).value='';});
   if($('og_semenOn'))$('og_semenOn').checked=false;toggleWrap('og_semenWrap',false);
   ['og_semenDate','og_semenLab','og_semenVolume','og_semenCount','og_semenPr','og_semenNormal'].forEach(id=>{if($(id))$(id).value='';});
@@ -2439,7 +2637,7 @@ function enterNewVisit(type){
   if($('og_receptionVisitType'))$('og_receptionVisitType').value=filePatient.visitType||'';
   if($('og_receptionVisitPurpose')){const vals=(data.settings.visitPurposes||[]);$('og_receptionVisitPurpose').innerHTML='<option value="">-- اختر --</option>'+vals.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');$('og_receptionVisitPurpose').value=filePatient.visitPurpose||'';}
   applyVisitTypeVisibility(pendingVisitType);
-  setTimeout(()=>{applyVisitTypeVisibility(pendingVisitType);const bar=$('pfNewVisitBar');if(bar)bar.scrollIntoView({behavior:'smooth',block:'start'});},50);
+  setTimeout(()=>{applyVisitTypeVisibility(pendingVisitType);const _mb=document.querySelector('#visitEditModal .modal-box');if(_mb)_mb.scrollTop=0;},50);
 }
 
 // IMPROVED: buildLiveFileViewHtml - تنسيق أجمل وإخفاء الحقول الفارغة
@@ -2508,6 +2706,7 @@ const visitNumber=existing?.data?.visit?.visitNumber || (existingVisits.length+1
 const visitData={
 visitNumber,visitType:receptionVisitType,visitPurpose:receptionVisitPurpose,visitFormType:formType,visitName,visitDate,nextVisitDate,
 vitals:{bp:$('og_antBp').value.trim(),wt:$('og_antWt').value},
+inbody:calcInBody(),
 complaint:$('og_complaint').value.trim(),
 investigations:{
 hsg:$('og_hsg').value,hsgReason:$('og_hsg').value==='Abnormal'?$('og_hsgReason').value.trim():'',
@@ -2786,7 +2985,7 @@ return{
 menstrual:{regularity:'',cycleDays:'',durationDays:'',menopauseYears:'',comment:''},
 pregnancy:{pregnant:''},
 obstetric:{lmp:'',edd:'',ga:'',g:'',p:[],l:'',d:'',a:[],e:[],gNum:'',pNum:'',aNum:'',lNum:'',eNum:'',dNum:''},
-pastMedical:'',pastSurgical:'',
+pastMedical:'',pastSurgical:'',inbody:{height:'',weight:'',bmi:'',cat:'',ideal:''},
 infertility:{laparoscopeOn:false,laparoscope:'',hystroscopeOn:false,hystroscope:'',icsiOn:false,icsiTrials:[],iuiOn:false,iuiTrials:[]},
 contraceptive:'',complaint:'',presentHistory:'',
 investigations:{hsg:'',hsgReason:'',uss:'',ussType:'',ussFindings:'',semenOn:false,semen:{date:'',labName:'',volume:'',count:'',progressive:'',normal:''}},
@@ -2891,6 +3090,7 @@ const btn=document.querySelector('.gplade-btn[data-letter="'+letter+'"]');
 if(btn){btn.classList.toggle('primary',!!hasData);btn.classList.toggle('gray',!hasData);}
 });
 $('og_pastMedical').value=og.pastMedical||'';
+if($('og_pfInbHeight')){$('og_pfInbHeight').value=(og.inbody&&og.inbody.height)||'';$('og_pfInbWeight').value=(og.inbody&&og.inbody.weight)||'';calcInBodyPf();}
 $('og_pastSurgical').value=og.pastSurgical||'';
 $('og_lapOn').checked=!!og.infertility.laparoscopeOn;
 $('og_laparoscope').value=og.infertility.laparoscope||'';
@@ -2985,6 +3185,7 @@ renderInvLabsChecklist(inv.invLabs||[]);
 renderMgmtPkgList();
 if($('og_antBp'))$('og_antBp').value='';
 if($('og_antWt'))$('og_antWt').value='';
+['og_inbHeight','og_inbWeight'].forEach(id=>{if($(id))$(id).value='';});calcInBody();
 ['og_ussCrl','og_ussGs','og_ussGa'].forEach(id=>{if($(id))$(id).value='';});
 ['og_folEndo','og_folRight','og_folLeft'].forEach(id=>{if($(id))$(id).value='';});
 if($('og_blankNotes'))$('og_blankNotes').value='';
@@ -2996,7 +3197,7 @@ function getMedicalFileOnlyData(og){
   // Canonical medical-file fields ONLY. No vitals, folliculometry, complaint,
   // present history, investigations, examination, impression, management,
   // key notes, visit dates/types/purpose, or next-visit data are allowed here.
-  const allowed=['menstrual','pregnancy','obstetric','pastMedical','pastSurgical','infertility','contraceptive','baseComplaint','basePresentHistory','baseInvestigation','baseExamination','baseImpression','baseManagement'];
+  const allowed=['menstrual','pregnancy','obstetric','inbody','pastMedical','pastSurgical','infertility','contraceptive','baseComplaint','basePresentHistory','baseInvestigation','baseExamination','baseImpression','baseManagement'];
   const out={};
   allowed.forEach(k=>{if(Object.prototype.hasOwnProperty.call(src,k))out[k]=src[k];});
   return out;
@@ -3043,6 +3244,7 @@ const ogHistory={
   obstetric:{lmp:$('og_ob_lmp').value,edd:$('og_ob_edd').value,ga:$('og_ob_ga').value,g:$('og_ob_g').value.trim(),p:cleanP,l:$('og_ob_l').value.trim(),d:$('og_ob_d').value.trim(),a:cleanA,e:cleanE,...Object.fromEntries(['g','p','a','l','e','d'].map(k=>[k+'Num',($('og_ob_'+k+'Num')?.value||'').trim()]))},
   pastMedical:$('og_pastMedical').value.trim(),
   pastSurgical:$('og_pastSurgical').value.trim(),
+  inbody:calcInBodyPf(),
   infertility:{
     laparoscopeOn:$('og_lapOn').checked,laparoscope:$('og_lapOn').checked?$('og_laparoscope').value.trim():'',
     hystroscopeOn:$('og_hysOn').checked,hystroscope:$('og_hysOn').checked?$('og_hystroscope').value.trim():'',
@@ -3173,20 +3375,30 @@ return (data.medicalFiles||[]).filter(mf=>mf.data&&mf.data.visit).map(mf=>{
  return db.localeCompare(da)||(b.v.visitNumber||0)-(a.v.visitNumber||0)||(b.mf.timestamp||0)-(a.mf.timestamp||0);
 });
 }
-async function loadAllVisitRecords(){
-  if(visitsRecordsLoaded)return true;
+const loadedVisitPatients=new Set();
+async function loadVisitRecordsFor(ids){
+  ids=[...new Set((ids||[]).filter(Boolean))].filter(id=>!loadedVisitPatients.has(id));
+  if(!ids.length)return true;
   try{
-    const {data:rows,error}=await sb.from('clinical_visits').select('*');
-    if(error)throw error;
-    const fresh=(rows||[]).map(r=>fromRow('medicalFiles',r));
-    data.medicalFiles=fresh;
-    visitsRecordsLoaded=true;
+    for(let i=0;i<ids.length;i+=80){
+      const chunk=ids.slice(i,i+80);
+      const {data:rows,error}=await sb.from('clinical_visits').select('*').in('patient_id',chunk);
+      if(error)throw error;
+      (rows||[]).map(r=>fromRow('medicalFiles',r)).forEach(rec=>{const k=data.medicalFiles.findIndex(x=>x.id===rec.id);if(k>=0)data.medicalFiles[k]=rec;else data.medicalFiles.push(rec);});
+      chunk.forEach(id=>loadedVisitPatients.add(id));
+    }
     return true;
   }catch(e){
-    console.error('loadAllVisitRecords failed',e);
+    console.error('loadVisitRecordsFor failed',e);
     toast('❌ تعذر تحميل سجلات الزيارات');
     return false;
   }
+}
+async function loadAllVisitRecords(){
+  /* egress-saver: only the patients currently listed on the visits page (+ the open file) */
+  const ids=getVisitPagePatients().map(p=>p.id);
+  if(typeof filePatient!=='undefined'&&filePatient)ids.push(filePatient.id);
+  return loadVisitRecordsFor(ids);
 }
 async function ensureVisitRecord(id){
   let mf=(data.medicalFiles||[]).find(x=>x.id===id);
@@ -3243,7 +3455,7 @@ function getVisitPagePatients(){
  // Picking a specific date (without a name search) filters to that date.
  // "عرض كل الحالات" (showAll) bypasses the date restriction entirely.
  if(q){
-   list=list.filter(p=>String(p.name||'').toLowerCase().includes(q));
+   list=list.filter(p=>normAr(p.name).includes(normAr(q)));
  }else if(!showAll){
    const dtFilter=dt||todayStr();
    list=list.filter(p=>String(p.date||'')===dtFilter);
@@ -3527,7 +3739,7 @@ const set=(id,val)=>{if($(id))$(id).value=val??''};
 set('og_visitName',v.visitName);set('og_visitDate',v.visitDate||todayStr());set('og_nextVisitDate',v.nextVisitDate||'');
 set('og_receptionVisitType',visitReceptionType(v)||filePatient?.visitType||'');
 if($('og_receptionVisitPurpose')){const vals=(data.settings.visitPurposes||[]);$('og_receptionVisitPurpose').innerHTML='<option value="">-- اختر --</option>'+vals.map(x=>`<option value="${esc(x)}">${esc(x)}</option>`).join('');$('og_receptionVisitPurpose').value=visitReceptionPurpose(v)||filePatient?.visitPurpose||'';}
-set('og_antBp',v.vitals?.bp);set('og_antWt',v.vitals?.wt);set('og_complaint',v.complaint);set('og_impression',v.impression);set('og_blankNotes',v.blankNotes);set('og_keyNotes',v.keyNotes);set('og_presentHistory',v.presentHistory);
+set('og_antBp',v.vitals?.bp);set('og_antWt',v.vitals?.wt);set('og_inbHeight',v.inbody?.height);set('og_inbWeight',v.inbody?.weight);calcInBody();set('og_complaint',v.complaint);set('og_impression',v.impression);set('og_blankNotes',v.blankNotes);set('og_keyNotes',v.keyNotes);set('og_presentHistory',v.presentHistory);
 const inv=v.investigations||{};set('og_hsg',inv.hsg);set('og_hsgReason',inv.hsgReason);set('og_uss',inv.uss);set('og_ussType',inv.ussType);set('og_ussCrl',inv.crl);set('og_ussGs',inv.gs);set('og_ussGa',inv.ga);set('og_ussFindings',inv.ussFindings);
 set('og_examMethod',v.examination?.method);set('og_examClinical',v.examination?.clinical);applyExamMethod('visit');set('og_uterus',v.examination?.uterus);set('og_rtAdnexa',v.examination?.rtAdnexa);set('og_ltAdnexa',v.examination?.ltAdnexa);set('og_pelvis',v.examination?.pelvis);set('og_examOther',v.examination?.other);
 set('og_folEndo',v.folliculometry?.endo);set('og_folRight',v.folliculometry?.rightOvary);set('og_folLeft',v.folliculometry?.leftOvary);
@@ -3556,7 +3768,7 @@ pendingVisitType=mf.data.visit.visitFormType||mf.data.visit.clinicalType||mf.dat
 loadQuickVisitIntoForm(mf.data.visit);
 applyVisitTypeVisibility(pendingVisitType);
 const lbl=$('pfNewVisitTypeLabel');if(lbl)lbl.textContent=(VISIT_TYPE_ICONS[pendingVisitType]||'📝')+' '+pendingVisitType+' — تعديل زيارة رقم '+(mf.data.visit.visitNumber||'');
-setTimeout(()=>{$('pfNewVisitBar')?.scrollIntoView({behavior:'smooth',block:'start'});},50);
+setTimeout(()=>{{const _mb=document.querySelector('#visitEditModal .modal-box');if(_mb)_mb.scrollTop=0;}},50);
 }
 async function printQuickVisit(id,retHtml){
 if($('mfViewModal')?.classList.contains('open'))closeModal('mfViewModal');
@@ -3578,6 +3790,7 @@ head+=field('Visit Type',visitReceptionType(v));
 head+=field('Visit Purpose',visitReceptionPurpose(v));
 const _hd=html;html=section('📋 Visit Info',head);
 let vitals='';vitals+=field('Blood Pressure',v.vitals?.bp);vitals+=field('Weight',v.vitals?.wt);html+=section('🩸 Vitals',vitals);
+html+=section('InBody',field('Height (cm)',v.inbody?.height)+field('Weight (kg)',v.inbody?.weight)+field('BMI',v.inbody?.bmi)+field('Status',v.inbody?.cat)+field('Ideal weight',v.inbody?.ideal));
 html+=section('😟 Complaint',field('Complaint',v.complaint));
 html+=section('📖 Present History',field('Present History',v.presentHistory));
 let invHtml='';
@@ -3727,6 +3940,7 @@ let html=mfBanner(savedPatient,(icons[visitClinicalLabel(v)]||'📝')+' '+(v.vis
 const _hd=html;html='';
 html+=section('📋 Visit Info',metaHtml);
 html+=section('🩸 Vitals',vitalsHtml);
+html+=section('InBody',fld('Height (cm)',v.inbody?.height)+fld('Weight (kg)',v.inbody?.weight)+fld('BMI',v.inbody?.bmi)+fld('Status',v.inbody?.cat)+fld('Ideal weight',v.inbody?.ideal));
 html+=section('😟 Complaint',fld('Complaint',v.complaint));
 html+=section('📖 Present History',fld('Present History',v.presentHistory));
 html+=section('🔬 Investigation',invHtml);
@@ -3852,6 +4066,7 @@ s5+=mfRow('P Num',og.obstetric?.pNum);(og.obstetric?.p||[]).forEach((e,i)=>{let 
 s5+=mfRow('A Num',og.obstetric?.aNum);(og.obstetric?.a||[]).forEach((e,i)=>{let r='';r+=mfRow('Weeks',e.weeks);r+=mfRow('Type',e.type);r+=mfRow('Complication',e.complication);s5+=mfRepeat('A — Miscarriage',i,r);});
 s5+=mfRow('E Num',og.obstetric?.eNum);(og.obstetric?.e||[]).forEach((e,i)=>{let r='';r+=mfRow('Side',e.side);r+=mfRow('Treatment',e.treatment);r+=mfRow('Notes',e.notes);s5+=mfRepeat('E — Ectopic Pregnancy',i,r);});
 out+=mfSection('🍼 Obstetric History',nextColor(),s5);
+out+=mfSection('InBody',nextColor(),mfRow('Height (cm)',og.inbody?.height)+mfRow('Weight (kg)',og.inbody?.weight)+mfRow('BMI',og.inbody?.bmi)+mfRow('Status',og.inbody?.cat)+mfRow('Ideal weight',og.inbody?.ideal));
 out+=mfSection('🩺 Past Medical History',nextColor(),mfRow('Medical History',og.pastMedical));
 out+=mfSection('🔪 Past Surgical History',nextColor(),mfRow('Surgical History',og.pastSurgical));
 let s8='';
@@ -4122,6 +4337,7 @@ if(!confirm(`Delete "${label}"?\nThe visit will be permanently deleted and the r
 try{
   await dbDel('medicalFiles',id);
   data.medicalFiles=(data.medicalFiles||[]).filter(x=>x.id!==id);
+  await loadVisitRecordsFor([mf.patientId]);
 
   // Renumber this patient's remaining visits sequentially: 1, 2, 3...
   const remaining=(data.medicalFiles||[])
@@ -4965,6 +5181,7 @@ for(const [key,raw] of Object.entries(backup.localData)){try{if(key===LS_NAME||k
 myName=localStorage.getItem(LS_NAME)||myName;
 }
 await loadAll();
+try{localStorage.removeItem(LS_DRUGS_CACHE);}catch(_){}
 await loadDrugLibrary();
 if(typeof loadedPatientRecords!=='undefined'){loadedPatientRecords.clear();}
 renderAll();
@@ -5056,6 +5273,243 @@ function init(id){
 try{AREAS.forEach(init);}catch(e){console.error('tiles init failed',e);}
 setInterval(function(){AREAS.forEach(function(id){var a=document.getElementById(id);if(!a||!a.dataset.tl)return;if(a.classList.contains('tl-any')&&a.getClientRects().length===0)close(a);else mark(a);});},900);
 document.addEventListener('keydown',function(e){if(e.key==='Escape')AREAS.forEach(function(id){var a=document.getElementById(id);if(a&&a.classList.contains('tl-any'))close(a);});});
+})();
+</script>
+<style id="phone-fix-simple-ui">
+/* visit data bar always last; tiles first (phone + desktop) */
+#visitEditModal .visit-edit-area{display:flex!important;flex-direction:column}
+#visitEditModal .visit-edit-area>.tl-grid{order:-2}
+#visitEditModal .visit-edit-area>#pfVisitSaveTop{order:-1}
+#visitEditModal .visit-edit-area>#pfNewVisitBar{order:99}
+/* bigger font */
+body{font-size:16px}
+.tab{font-size:16px;padding:12px 18px}
+.btn{font-size:15.5px;padding:12px 20px;font-weight:700}
+.btn.sm{font-size:14.5px;padding:9px 14px}
+.field label,.flabel{font-size:15px}
+.field input,.field select,.field textarea,.og-input,.og-ta,.toolbar input,.toolbar select{font-size:16px;padding:11px 12px}
+.acc-head h4{font-size:16.5px}
+.tl-tile{font-size:16px;font-weight:800;min-height:84px;aspect-ratio:auto}
+.tl-tile b{display:none}
+.tl-nav button{font-size:15px;padding:11px 16px}
+.tl-cnt{font-size:14px}
+table{font-size:15px}th{font-size:14px}
+.pf-value{font-size:14px!important}.pf-label{font-size:11px!important}
+#inbOut{font-size:16px}
+</style>
+<script id="simple-ui-js">
+(function(){
+/* strip decorative emoji; keep functional marks (close / next / prev / done) */
+var KEEP='✖✔✓◀▶▾▴❌⚠';
+var RT=/\p{Extended_Pictographic}/u,RG=/[\p{Extended_Pictographic}\u200d\ufe0f\u20e3]/gu;
+var SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,INPUT:1,NOSCRIPT:1};
+function clean(s){return s.replace(RG,function(c){return KEEP.indexOf(c)>=0?c:'';}).replace(/[ \u00a0]{2,}/g,' ');}
+function attr(e){['placeholder','title'].forEach(function(a){var v=e.getAttribute&&e.getAttribute(a);if(v&&RT.test(v)){var r=clean(v).trim();if(r!==v)e.setAttribute(a,r);}});}
+function walk(n){
+ if(n.nodeType===3){var p=n.parentNode;if(!p||SKIP[p.nodeName])return;if(p.nodeName==='OPTION'&&!p.hasAttribute('value'))return;var t=n.nodeValue;if(RT.test(t)){var r=clean(t);if(r!==t)n.nodeValue=r;}return;}
+ if(n.nodeType!==1||SKIP[n.nodeName])return;
+ attr(n);
+ for(var c=n.firstChild;c;c=c.nextSibling)walk(c);
+}
+try{document.title=clean(document.title).trim();walk(document.body);}catch(e){console.error('simple-ui',e);}
+new MutationObserver(function(ms){ms.forEach(function(m){
+ if(m.type==='childList')m.addedNodes.forEach(walk);
+ else if(m.type==='characterData')walk(m.target);
+ else if(m.type==='attributes')attr(m.target);
+});}).observe(document.body,{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['placeholder','title']});
+})();
+</script>
+<style id="device-ui">
+/* ================= DEVICE-SMART UI (additive layer — nothing above is removed) ================= */
+#mBar,#mMore,#mMoreBack{display:none}
+/* ---------- desktop ---------- */
+html[data-device="desktop"] main{max-width:1400px}
+
+/* ---------- touch devices (tablet + phone) ---------- */
+html[data-touch="1"] .btn,html[data-touch="1"] .tab{min-height:44px}
+html[data-touch="1"] .btn.sm{min-height:38px}
+html[data-touch="1"] .check-item{min-height:44px}
+html[data-touch="1"] *{-webkit-tap-highlight-color:rgba(190,24,93,.12)}
+html[data-touch="1"] button,html[data-touch="1"] .tab{touch-action:manipulation}
+
+/* ---------- mobile ---------- */
+html[data-device="mobile"] body{-webkit-text-size-adjust:100%;padding-bottom:0;overscroll-behavior-y:none}
+html[data-device="mobile"] #appRoot,html[data-device="mobile"] #loginScreen{max-width:560px;margin:0 auto}
+html[data-device="mobile"] header{position:sticky;top:0;z-index:60;padding:calc(env(safe-area-inset-top,0px) + 8px) 12px 8px;gap:6px}
+html[data-device="mobile"] header h1{font-size:15.5px}
+html[data-device="mobile"] #loggedInAs{display:none}
+html[data-device="mobile"] header .status{font-size:11.5px;padding:5px 10px}
+html[data-device="mobile"] nav{display:none!important}
+html[data-device="mobile"] main{margin:10px auto 0;padding:0 10px calc(86px + env(safe-area-inset-bottom,0px))}
+html[data-device="mobile"] .card{padding:14px;border-radius:14px}
+html[data-device="mobile"] .card h2{font-size:16px}
+html[data-device="mobile"] .stats{grid-template-columns:repeat(2,1fr)}
+html[data-device="mobile"] .form-grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+html[data-device="mobile"] .two-col,html[data-device="mobile"] .three-col{grid-template-columns:1fr}
+html[data-device="mobile"] .chat-wrap{grid-template-columns:1fr;height:auto}
+html[data-device="mobile"] .convo{height:60vh}
+html[data-device="mobile"] .toolbar{gap:6px}
+html[data-device="mobile"] .toolbar .btn{flex:1 1 auto}
+html[data-device="mobile"] .btn{padding:12px 14px}
+html[data-device="mobile"] input,html[data-device="mobile"] select,html[data-device="mobile"] textarea{font-size:16px!important}
+html[data-device="mobile"] #toast{bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:92vw}
+html[data-device="mobile"] .modal:not(#fileModal):not(#mfViewModal):not(#visitEditModal){padding:0;align-items:flex-end}
+html[data-device="mobile"] .modal:not(#fileModal):not(#mfViewModal):not(#visitEditModal) .modal-box{max-width:100%!important;width:100%!important;border-radius:18px 18px 0 0;max-height:92vh;overflow:auto;padding:16px 14px calc(16px + env(safe-area-inset-bottom,0px))}
+html[data-device="mobile"] .setup-box{margin:24px 12px;padding:20px}
+
+/* tables -> cards (data-label is added by device-ui-js; the markup/handlers are untouched) */
+html[data-device="mobile"] table.m-cards{min-width:0!important;display:block}
+html[data-device="mobile"] table.m-cards thead{display:none}
+html[data-device="mobile"] table.m-cards tbody{display:block}
+html[data-device="mobile"] table.m-cards tr{display:block;background:#fff;border:1px solid #e2e8f0;border-radius:12px;margin-bottom:8px;padding:6px 12px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+html[data-device="mobile"] table.m-cards td{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:6px 0;border:0;border-bottom:1px dashed #f1f5f9;text-align:right;font-size:14.5px}
+html[data-device="mobile"] table.m-cards td:last-child{border-bottom:0;flex-wrap:wrap;justify-content:flex-end}
+html[data-device="mobile"] table.m-cards td::before{content:attr(data-label);color:#64748b;font-size:12px;font-weight:700;flex:none}
+html[data-device="mobile"] table.m-cards td[data-label="#"]{display:none}
+html[data-device="mobile"] table.m-cards td[data-label="Actions"]{flex-wrap:nowrap;justify-content:stretch;gap:6px;padding-top:8px}
+html[data-device="mobile"] table.m-cards td[data-label="Actions"]::before{display:none}
+html[data-device="mobile"] table.m-cards td[data-label="Actions"] .btn{flex:1 1 0;padding:10px 4px;font-size:14px;white-space:nowrap}
+html[data-device="mobile"] table.m-cards td[colspan]{display:block;text-align:center}
+html[data-device="mobile"] table.m-cards td[colspan]::before{content:none}
+html[data-device="mobile"] #tab-stats table.m-cards td:last-child{justify-content:space-between}
+
+/* bottom navigation */
+html[data-device="mobile"] #mBar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:90;background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -4px 18px rgba(15,23,42,.1);padding:4px 4px calc(4px + env(safe-area-inset-bottom,0px));direction:rtl;max-width:560px;margin:0 auto}
+html[data-device="mobile"] #mBar button{flex:1 1 0;min-width:0;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 2px;border-radius:12px;color:#64748b;font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;position:relative;min-height:54px}
+html[data-device="mobile"] #mBar button svg{width:24px;height:24px}
+html[data-device="mobile"] #mBar button.on{color:#be185d;background:#fdf2f8}
+html[data-device="mobile"] #mBar .mb-badge{position:absolute;top:2px;left:50%;margin-left:6px;background:#ef4444;color:#fff;border-radius:10px;font-size:10px;line-height:1;padding:3px 6px;font-weight:800}
+html[data-device="mobile"] #mBar .mb-badge:empty{display:none}
+html[data-device="mobile"] #mMoreBack.open{display:block;position:fixed;inset:0;z-index:95;background:rgba(15,23,42,.5)}
+html[data-device="mobile"] #mMore.open{display:block;position:fixed;left:0;right:0;bottom:0;z-index:96;background:#fff;border-radius:20px 20px 0 0;padding:14px 14px calc(18px + env(safe-area-inset-bottom,0px));box-shadow:0 -10px 40px rgba(0,0,0,.25);direction:rtl;max-width:560px;margin:0 auto}
+html[data-device="mobile"] #mMore .mm-grip{width:44px;height:5px;border-radius:3px;background:#cbd5e1;margin:0 auto 12px}
+html[data-device="mobile"] #mMore .mm-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+html[data-device="mobile"] #mMore button{display:flex;align-items:center;gap:10px;border:1.5px solid #e2e8f0;background:#f8fafc;border-radius:14px;padding:14px 12px;font-family:inherit;font-size:15px;font-weight:700;color:#334155;cursor:pointer;position:relative;min-height:56px}
+html[data-device="mobile"] #mMore button svg{width:24px;height:24px;color:#be185d;flex:none}
+html[data-device="mobile"] #mMore button.on{border-color:#be185d;background:#fdf2f8;color:#9d174d}
+html[data-device="mobile"] #mMore .mb-badge{background:#ef4444;color:#fff;border-radius:10px;font-size:11px;padding:2px 7px;font-weight:800;margin-right:auto}
+html[data-device="mobile"] #mMore .mb-badge:empty{display:none}
+@media print{#mBar,#mMore,#mMoreBack{display:none!important}}
+</style>
+<script id="device-ui-js">
+(function(){
+'use strict';
+var K='clinic-ui-mode',root=document.documentElement;
+var ICON={
+ phone:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/></svg>',
+ desktop:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg>',
+ auto:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.6L18.5 9l-4.7 1.4L12 15l-1.8-4.6L5.5 9l4.7-1.4z"/><path d="M19 15l.8 2 2 .8-2 .8-.8 2-.8-2-2-.8 2-.8z"/></svg>',
+ home:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>',
+ queue:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+ cal:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M8 3v4M16 3v4M3.5 10h17"/></svg>',
+ list:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/></svg>',
+ more:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>',
+ file:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 00-2 2v14a2 2 0 002 2h10a2 2 0 002-2V8z"/><path d="M14 3v5h5M9 13h6M9 17h6"/></svg>',
+ visits:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 012-2h4l2 2h8a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>',
+ stats:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>',
+ chat:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 01-11.8 7L4 20l1.1-4.4A8 8 0 1121 12z"/></svg>',
+ gear:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 00.3 1.8l.1.1a2 2 0 11-2.8 2.8l-.1-.1a1.7 1.7 0 00-1.8-.3 1.7 1.7 0 00-1 1.5V21a2 2 0 11-4 0v-.1a1.7 1.7 0 00-1.1-1.5 1.7 1.7 0 00-1.8.3l-.1.1a2 2 0 11-2.8-2.8l.1-.1a1.7 1.7 0 00.3-1.8 1.7 1.7 0 00-1.5-1H3a2 2 0 110-4h.1a1.7 1.7 0 001.5-1.1 1.7 1.7 0 00-.3-1.8l-.1-.1a2 2 0 112.8-2.8l.1.1a1.7 1.7 0 001.8.3H9a1.7 1.7 0 001-1.5V3a2 2 0 114 0v.1a1.7 1.7 0 001 1.5 1.7 1.7 0 001.8-.3l.1-.1a2 2 0 112.8 2.8l-.1.1a1.7 1.7 0 00-.3 1.8V9a1.7 1.7 0 001.5 1H21a2 2 0 110 4h-.1a1.7 1.7 0 00-1.5 1z"/></svg>'
+};
+var MAIN=[['reception','الرسيبشن','home'],['queue','الانتظار','queue'],['appointments','الحجز','cal'],['patients','الحالات','list']];
+var MORE=[['medicalfile','الملف الطبي','file'],['visits','الزيارات','visits'],['stats','الاحصائيات','stats'],['chat','الشات','chat'],['settings','الاعدادات','gear']];
+function $(id){return document.getElementById(id);}
+function det(){return window.__uiDetect?window.__uiDetect():{mode:'auto',auto:'desktop',device:'desktop',touch:false,phone:false};}
+
+/* ---------- apply a mode ---------- */
+function apply(){
+ var r=det();
+ root.setAttribute('data-device',r.device);root.setAttribute('data-uimode',r.mode);
+ if(r.touch)root.setAttribute('data-touch','1');else root.removeAttribute('data-touch');
+ var v=document.querySelector('meta[name=viewport]');
+ if(v){
+  var forceDesk=r.device==='desktop'&&r.mode==='desktop'&&(r.phone||(window.innerWidth||1024)<700);
+  v.setAttribute('content',forceDesk?'width=1100':'width=device-width, initial-scale=1, viewport-fit=cover');
+ }
+ syncBar();closeMore();
+}
+
+/* ---------- bottom bar (mobile) ---------- */
+function goTab(name){
+ var t=document.querySelector('.tab[data-tab="'+name+'"]');
+ if(t){t.click();try{window.scrollTo({top:0});}catch(e){}}
+}
+function buildBar(){
+ var app=$('appRoot');if(!app||$('mBar'))return;
+ var bar=document.createElement('div');bar.id='mBar';bar.setAttribute('role','navigation');
+ var h='';
+ MAIN.forEach(function(t){h+='<button type="button" data-go="'+t[0]+'">'+ICON[t[2]]+'<span>'+t[1]+'</span><i class="mb-badge" data-for="'+t[0]+'"></i></button>';});
+ h+='<button type="button" data-go="__more">'+ICON.more+'<span>المزيد</span><i class="mb-badge" data-for="__more"></i></button>';
+ bar.innerHTML=h;app.appendChild(bar);
+ var back=document.createElement('div');back.id='mMoreBack';app.appendChild(back);
+ var more=document.createElement('div');more.id='mMore';
+ var g='<div class="mm-grip"></div><div class="mm-grid">';
+ MORE.forEach(function(t){g+='<button type="button" data-go="'+t[0]+'">'+ICON[t[2]]+'<span>'+t[1]+'</span><i class="mb-badge" data-for="'+t[0]+'"></i></button>';});
+ g+='</div>';more.innerHTML=g;app.appendChild(more);
+ bar.addEventListener('click',function(e){
+  var b=e.target.closest('button');if(!b)return;
+  var go=b.getAttribute('data-go');
+  if(go==='__more'){more.classList.contains('open')?closeMore():openMore();return;}
+  closeMore();goTab(go);
+ });
+ more.addEventListener('click',function(e){var b=e.target.closest('button');if(!b)return;closeMore();goTab(b.getAttribute('data-go'));});
+ back.addEventListener('click',closeMore);
+ syncBar();
+}
+function openMore(){var m=$('mMore'),b=$('mMoreBack');if(m){m.classList.add('open');b.classList.add('open');}}
+function closeMore(){var m=$('mMore'),b=$('mMoreBack');if(m){m.classList.remove('open');b.classList.remove('open');}}
+function activeTab(){var a=document.querySelector('nav .tab.active');return a?a.getAttribute('data-tab'):'reception';}
+function syncBar(){
+ if(!$('mBar'))return;
+ var cur=activeTab(),inMore=MORE.some(function(t){return t[0]===cur;});
+ document.querySelectorAll('#mBar button,#mMore button').forEach(function(b){
+  var go=b.getAttribute('data-go');
+  b.classList.toggle('on',go===cur||(go==='__more'&&inMore));
+ });
+ var qb=$('queueBadge'),cb=$('chatBadge'),q=qb?qb.textContent:'',c=cb?cb.textContent:'';
+ document.querySelectorAll('.mb-badge').forEach(function(i){
+  var f=i.getAttribute('data-for'),v='';
+  if(f==='queue')v=q;else if(f==='chat')v=c;else if(f==='__more')v=c;
+  if(i.textContent!==v)i.textContent=v;
+ });
+}
+
+/* ---------- tables -> labelled cards (mobile CSS uses the labels) ---------- */
+var tblQueued=false;
+function labelTables(){
+ tblQueued=false;
+ document.querySelectorAll('#appRoot main table').forEach(function(t){
+  var th=t.querySelectorAll('thead th');if(!th.length)return;
+  if(!t.classList.contains('m-cards'))t.classList.add('m-cards');
+  var labels=[].map.call(th,function(x){return x.textContent.trim();});
+  t.querySelectorAll('tbody tr').forEach(function(tr){
+   var c=tr.children;
+   for(var i=0;i<c.length;i++){if(c[i].tagName==='TD'&&!c[i].hasAttribute('colspan')&&c[i].getAttribute('data-label')!==labels[i]&&labels[i]!==undefined)c[i].setAttribute('data-label',labels[i]);}
+  });
+ });
+}
+function queueTables(){if(!tblQueued){tblQueued=true;requestAnimationFrame(labelTables);}}
+
+/* ---------- boot ---------- */
+function init(){
+ buildBar();apply();
+ var nav=document.querySelector('nav');
+ if(nav)new MutationObserver(syncBar).observe(nav,{subtree:true,attributes:true,attributeFilter:['class'],childList:true,characterData:true});
+ ['queueBadge','chatBadge'].forEach(function(id){var e=$(id);if(e)new MutationObserver(syncBar).observe(e,{childList:true,characterData:true,subtree:true});});
+ var main=document.querySelector('#appRoot main');
+ if(main)new MutationObserver(queueTables).observe(main,{childList:true,subtree:true});
+ queueTables();
+ var rz=null;
+ function onResize(){clearTimeout(rz);rz=setTimeout(function(){apply();},200);}
+ window.addEventListener('resize',onResize);window.addEventListener('orientationchange',onResize);
+ /* desktop power-user shortcuts: Alt+1..9 switches tabs */
+ document.addEventListener('keydown',function(e){
+  if(!e.altKey||e.ctrlKey||e.metaKey||root.getAttribute('data-device')!=='desktop')return;
+  var n=parseInt(e.key,10);if(!(n>=1&&n<=9))return;
+  var tabs=document.querySelectorAll('nav .tab');if(tabs[n-1]&&$('appRoot').style.display!=='none'){e.preventDefault();tabs[n-1].click();}
+ });
+ document.addEventListener('keydown',function(e){if(e.key==='Escape')closeMore();});
+}
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
 </script>
 </body>
