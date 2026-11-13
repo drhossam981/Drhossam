@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
+<link rel="manifest" href="manifest.json">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#be185d">
@@ -424,7 +425,7 @@ table{min-width:720px}
 .visit-history-lab-main small{font-size:10px;color:#64748b;overflow-wrap:anywhere}
 .visit-history-lab-actions{display:flex;gap:3px;flex:0 0 auto}
 .visit-history-lab-actions .btn{padding:3px 6px!important;font-size:9px!important}
-@media(max-width:560px){#mfViewModal .modal-box{width:96vw!important}.#mfViewModal #mfViewContent .pf-grid{grid-template-columns:1fr!important}.visit-history-lab-main{grid-template-columns:1fr 1fr}.visit-history-lab-main small{grid-column:1/-1}.visit-history-lab-row{align-items:flex-start;flex-wrap:wrap}}
+@media(max-width:560px){#mfViewModal .modal-box{width:96vw!important}#mfViewModal #mfViewContent .pf-grid{grid-template-columns:1fr!important}.visit-history-lab-main{grid-template-columns:1fr 1fr}.visit-history-lab-main small{grid-column:1/-1}.visit-history-lab-row{align-items:flex-start;flex-wrap:wrap}}
 /* ===== Medical file view (vertical, colorful, framed) — final, wins over the
    older scattered #mfViewModal .pf-* rules above ===== */
 #mfViewModal #mfViewContent.mf-file-view{background:#f3e8ff!important;padding:14px!important}
@@ -1041,6 +1042,7 @@ table{min-width:720px}
 <button class="x" data-close="visitEditModal">✖</button>
 </div>
 <div id="visitEditKA"></div>
+<button type="button" id="visitSaveFab" class="btn primary" onclick="saveQuickVisit()">💾 حفظ</button>
 <div id="visitEditArea" class="visit-edit-area">
 <div id="pfVisitSaveTop" style="display:none;position:sticky;top:8px;z-index:100;margin-bottom:12px;padding:10px;background:#fff;border:2px solid #be185d;border-radius:12px;box-shadow:0 6px 18px rgba(190,24,93,.18);align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap">
 <div style="font-weight:800;color:#be185d">📝 بيانات الزيارة الجديدة</div>
@@ -1158,12 +1160,10 @@ table{min-width:720px}
 <div class="acc nested visit-only-acc" data-visit-types="Folliculometry">
 <div class="acc-head" onclick="toggleAcc('accFol')"><h4>🔬 Folliculametry</h4><span class="acc-ic" id="ic-accFol">▾</span></div>
 <div class="acc-body" id="accFol" style="display:none">
-<label class="flabel">Endo</label>
+<button class="btn blue" type="button" onclick="hxFolPreview()" style="margin-bottom:8px">📈 Preview chart (how it looks after ~1 month)</button>
+<label class="flabel">Endometrium (mm / pattern)</label>
 <textarea id="og_folEndo" class="og-ta"></textarea>
-<label class="flabel">Right ovary</label>
-<textarea id="og_folRight" class="og-ta"></textarea>
-<label class="flabel">Left ovary</label>
-<textarea id="og_folLeft" class="og-ta"></textarea>
+<label class="flabel">Right ovary — follicle size (mm)</label><div class="fol-add"><input type="number" step="0.1" min="1" max="60" id="hxR" class="og-input" placeholder="Size in mm (e.g. 18)" inputmode="decimal"><button class="btn sm primary" type="button" onclick="hxAddFol('hxR','og_folRight')">➕ Add follicle</button><button class="btn sm gray" type="button" onclick="hxClrFol('og_folRight')">Clear</button></div><textarea id="og_folRight" class="og-ta" rows="3" style="min-height:70px" placeholder="Write anything you need here (e.g. 18x16, 14, 12 mm, notes...)"></textarea><label class="flabel">Left ovary — follicle size (mm)</label><div class="fol-add"><input type="number" step="0.1" min="1" max="60" id="hxL" class="og-input" placeholder="Size in mm (e.g. 18)" inputmode="decimal"><button class="btn sm primary" type="button" onclick="hxAddFol('hxL','og_folLeft')">➕ Add follicle</button><button class="btn sm gray" type="button" onclick="hxClrFol('og_folLeft')">Clear</button></div><textarea id="og_folLeft" class="og-ta" rows="3" style="min-height:70px" placeholder="Write anything you need here (e.g. 18x16, 14, 12 mm, notes...)"></textarea>
 </div>
 </div>
 <div class="acc nested visit-only-acc" data-visit-types="Antenatal,Gynae,Folliculometry">
@@ -1548,7 +1548,7 @@ return`
 <div style="display:flex;gap:4px;flex:none">
 <button class="btn sm blue" onclick="loadMgmtPkg(${i})">📥 Load</button>
 <button class="btn sm gray" onclick="renameMgmtPkg(${i})">✏️ Rename</button>
-<button class="btn sm red" onclick="deleteMgmtPkg(${i})">🗑</button>
+<button class="btn sm red" onclick="deleteMgmtPkg(${i})">🗑 حذف</button>
 </div>
 </div>
 `;}).join('');
@@ -1689,7 +1689,7 @@ return`
 <div style="display:flex;gap:4px;flex:none">
 <button class="btn sm blue" onclick="loadBaseMgmtPkg(${i})">📥 Load</button>
 <button class="btn sm gray" onclick="renameMgmtPkg(${i})">✏️ Rename</button>
-<button class="btn sm red" onclick="deleteMgmtPkg(${i})">🗑</button>
+<button class="btn sm red" onclick="deleteMgmtPkg(${i})">🗑 حذف</button>
 </div>
 </div>
 `;}).join('');
@@ -2383,7 +2383,7 @@ function renderQueue(){
 const list=queueList();const box=$('queueList');const t=todayStr();
 $('queueBadge').textContent=data.patients.filter(p=>p.status==='Waiting'&&p.date===t).length||'';
 if(!list.length){box.innerHTML='<div class="empty">Nobody in queue 🎉</div>';return;}
-box.innerHTML=list.map((p,i)=>`<div class="queue-item ${p.status==='Called'?'called':''}"><div class="ord">${i+1}</div><div style="flex:1;min-width:150px"><b>${esc(p.name)}</b> <span class="chip ${isNewVisit(p.visitType)?'exam':'followup'}">${esc(p.visitType)}</span><div style="font-size:12px;color:#94a3b8">🎯 ${esc(p.visitPurpose)} — ⏰ ${p.time?fmtTime(p.time):''}</div></div><span class="chip ${p.status==='Called'?'call':'wait'}">${esc(p.status)}</span><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁</button>${p.status==='Waiting'?`<button class="btn sm blue" onclick="callPatient('${p.id}')">📢</button>`:''}<button class="btn sm primary" onclick="markDone('${p.id}')">✔</button><button class="btn sm gray" onclick="openRx('${p.id}')">💊</button><button class="btn sm red" onclick="delPatient('${p.id}')">🗑</button></div>`).join('');
+box.innerHTML=list.map((p,i)=>`<div class="queue-item ${p.status==='Called'?'called':''}"><div class="ord">${i+1}</div><div style="flex:1;min-width:150px"><b>${esc(p.name)}</b> <span class="chip ${isNewVisit(p.visitType)?'exam':'followup'}">${esc(p.visitType)}</span><div style="font-size:12px;color:#94a3b8">🎯 ${esc(p.visitPurpose)} — ⏰ ${p.time?fmtTime(p.time):''}</div></div><span class="chip ${p.status==='Called'?'call':'wait'}">${esc(p.status)}</span><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁 الملف</button>${p.status==='Waiting'?`<button class="btn sm blue" onclick="callPatient('${p.id}')">📢 نداء</button>`:''}<button class="btn sm primary" onclick="markDone('${p.id}')">✔ تم</button><button class="btn sm gray" onclick="openRx('${p.id}')">💊 روشتة</button><button class="btn sm red" onclick="delPatient('${p.id}')">🗑 حذف</button></div>`).join('');
 }
 function callNext(){const list=queueList().filter(p=>p.status==='Waiting');if(list.length)callPatient(list[0].id);else toast('Nobody in queue');}
 async function callPatient(id){const p=data.patients.find(x=>x.id===id);if(p){const ok=await dbPut('patients',{...p,status:'Called',calledAt:Date.now()});if(ok)toast('📢 Called: '+p.name);}}
@@ -2404,7 +2404,7 @@ $('apptCount').textContent=list.length+' booking'+(list.length>1?'s':'');
 box.innerHTML=dates.map(d=>{
 const tag=d===t?' — TODAY ⭐':(d===addDays(t,1)?' — Tomorrow':'');
 const rows=groups[d].sort((a,b)=>(a.time||'').localeCompare(b.time||''));
-return`<div class="day-group"><div class="day-head"><span>📅 ${fmtDate(d)}${tag}</span><span class="cnt">${rows.length}</span></div>${rows.map(p=>`<div class="appt-row"><span class="tm">⏰ ${p.time?fmtTime(p.time):'—'}</span><b>${esc(p.name)}</b><span style="color:#64748b;font-size:13px">${esc(p.visitPurpose)} — ${esc(p.visitType)}</span><span class="chip ${p.status==='Done'?'done':(p.status==='Called'?'call':'wait')}">${esc(p.status)}</span><span style="flex:1"></span><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁</button><button class="btn sm blue" onclick="openPatientModal('${p.id}')">✏️</button><button class="btn sm red" onclick="delPatient('${p.id}')">🗑</button></div>`).join('')}</div>`;
+return`<div class="day-group"><div class="day-head"><span>📅 ${fmtDate(d)}${tag}</span><span class="cnt">${rows.length}</span></div>${rows.map(p=>`<div class="appt-row"><span class="tm">⏰ ${p.time?fmtTime(p.time):'—'}</span><b>${esc(p.name)}</b><span style="color:#64748b;font-size:13px">${esc(p.visitPurpose)} — ${esc(p.visitType)}</span><span class="chip ${p.status==='Done'?'done':(p.status==='Called'?'call':'wait')}">${esc(p.status)}</span><span style="flex:1"></span><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁 الملف</button><button class="btn sm blue" onclick="openPatientModal('${p.id}')">✏️ تعديل</button><button class="btn sm red" onclick="delPatient('${p.id}')">🗑 حذف</button></div>`).join('')}</div>`;
 }).join('');
 }
 function setApptFilter(f,btn){apptFilter=f;$('apptDate').value='';document.querySelectorAll('.appt-fbtn').forEach(b=>b.classList.remove('active'));if(btn)btn.classList.add('active');renderAppointments();}
@@ -2474,7 +2474,7 @@ patMoreUI(list.length,shown.length);
 return;
 }
 patMoreUI(0,0);
-$('patBody').innerHTML=list.length?list.map((p,i)=>`<tr><td>${i+1}</td><td><b style="cursor:pointer;color:#be185d" onclick="openPatientFile('${p.id}')">${esc(p.name)}</b></td><td>${esc(p.age)}</td><td>${esc(p.visitPurpose||'—')}</td><td><span class="chip ${isNewVisit(p.visitType)?'exam':'followup'}">${esc(p.visitType||'—')}</span></td><td><span class="chip ${p.status==='Done'?'done':(p.status==='Called'?'call':'wait')}">${esc(p.status||'—')}</span></td><td>${esc(p.date||'—')}</td><td><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁</button> <button class="btn sm blue" onclick="openPatientModal('${p.id}')">✏️</button> <button class="btn sm red" onclick="delPatient('${p.id}')">🗑</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">No patients</td></tr>';
+$('patBody').innerHTML=list.length?list.map((p,i)=>`<tr><td>${i+1}</td><td><b style="cursor:pointer;color:#be185d" onclick="openPatientFile('${p.id}')">${esc(p.name)}</b></td><td>${esc(p.age)}</td><td>${esc(p.visitPurpose||'—')}</td><td><span class="chip ${isNewVisit(p.visitType)?'exam':'followup'}">${esc(p.visitType||'—')}</span></td><td><span class="chip ${p.status==='Done'?'done':(p.status==='Called'?'call':'wait')}">${esc(p.status||'—')}</span></td><td>${esc(p.date||'—')}</td><td><button class="btn sm gray" onclick="openPatientFile('${p.id}')">📁 الملف</button> <button class="btn sm blue" onclick="openPatientModal('${p.id}')">✏️ تعديل</button> <button class="btn sm red" onclick="delPatient('${p.id}')">🗑 حذف</button></td></tr>`).join(''):'<tr><td colspan="8" class="empty">No patients</td></tr>';
 }
 function resetPatFilters(){patSearch='';if($('patSearchInp'))$('patSearchInp').value='';patPurpose='';patType='';patDateVal='';patShowAll=false;$('patDate').value='';$('patShowAll').checked=false;renderPatients();}
 function exportExcel(){
@@ -3336,7 +3336,7 @@ const groups=groupByVisitDate(filePatient.id);
 if(!groups.length){box.innerHTML='<div class="empty">No labs or prescriptions yet</div>';return;}
 box.innerHTML=groups.map((g,i)=>{
 const key=g.date;const open=openVisitKeys[key]!==undefined?openVisitKeys[key]:(i===0);
-return`<div class="day-group" style="margin-bottom:10px"><div class="day-head" style="cursor:pointer" onclick="toggleVisitGroup('${key.replace(/'/g,"\\'")}')"><span>📅 ${g.date==='No date'?g.date:fmtDate(g.date)}</span><span class="cnt">${g.labs.length} labs — ${g.rxs.length} prescriptions</span><span style="margin-left:auto;color:#be185d;font-size:16px">${open?'▴':'▾'}</span></div>${open?`<div style="padding:4px 6px">${g.rxs.length?g.rxs.map(r=>`<div class="rx-hist-item" onclick="viewRx('${r.id}')"><span>💊 ${r.diagnosis?esc(r.diagnosis):'No diagnosis'} — ${(r.meds||[]).length} meds ${(r.labs&&r.labs.length)?' + '+r.labs.length+' labs':''}</span><span onclick="event.stopPropagation();"><button class="btn sm blue" onclick="viewRx('${r.id}')">👁</button> <button class="btn sm gray" onclick="loadRxInto('${r.id}')">✏️</button> <button class="btn sm blue" onclick="printRx('${r.id}')">🖨</button> <button class="btn sm red" onclick="event.stopPropagation();delRxFrom('${r.id}')">🗑</button></span></div>`).join(''):''}${g.labs.length?`<b style="font-size:13px;display:block;margin-top:8px;color:#166534">🧪 Lab Results</b><div class="visit-history-labs">${g.labs.map(l=>{const sp=splitLabNotes(l.notes);return`<div class="visit-history-lab-row"><div class="visit-history-lab-main"><b>${esc(l.testName)}</b><span>${esc(l.result)}</span><small>${esc(sp.unit||sp.note||'')}</small></div><div class="visit-history-lab-actions"><button class="btn sm gray" type="button" onclick="event.stopPropagation();editVisitHistoryLabResult('${l.id}')">✏️ تعديل</button><button class="btn sm red" type="button" onclick="event.stopPropagation();deleteVisitHistoryLabResult('${l.id}')">🗑 حذف</button></div></div>`;}).join('')}</div>`:''}</div>`:''}</div>`;
+return`<div class="day-group" style="margin-bottom:10px"><div class="day-head" style="cursor:pointer" onclick="toggleVisitGroup('${key.replace(/'/g,"\\'")}')"><span>📅 ${g.date==='No date'?g.date:fmtDate(g.date)}</span><span class="cnt">${g.labs.length} labs — ${g.rxs.length} prescriptions</span><span style="margin-left:auto;color:#be185d;font-size:16px">${open?'▴':'▾'}</span></div>${open?`<div style="padding:4px 6px">${g.rxs.length?g.rxs.map(r=>`<div class="rx-hist-item" onclick="viewRx('${r.id}')"><span>💊 ${r.diagnosis?esc(r.diagnosis):'No diagnosis'} — ${(r.meds||[]).length} meds ${(r.labs&&r.labs.length)?' + '+r.labs.length+' labs':''}</span><span onclick="event.stopPropagation();"><button class="btn sm blue" onclick="viewRx('${r.id}')">👁</button> <button class="btn sm gray" onclick="loadRxInto('${r.id}')">✏️ تعديل</button> <button class="btn sm blue" onclick="printRx('${r.id}')">🖨 طباعة</button> <button class="btn sm red" onclick="event.stopPropagation();delRxFrom('${r.id}')">🗑 حذف</button></span></div>`).join(''):''}${g.labs.length?`<b style="font-size:13px;display:block;margin-top:8px;color:#166534">🧪 Lab Results</b><div class="visit-history-labs">${g.labs.map(l=>{const sp=splitLabNotes(l.notes);return`<div class="visit-history-lab-row"><div class="visit-history-lab-main"><b>${esc(l.testName)}</b><span>${esc(l.result)}</span><small>${esc(sp.unit||sp.note||'')}</small></div><div class="visit-history-lab-actions"><button class="btn sm gray" type="button" onclick="event.stopPropagation();editVisitHistoryLabResult('${l.id}')">✏️ تعديل</button><button class="btn sm red" type="button" onclick="event.stopPropagation();deleteVisitHistoryLabResult('${l.id}')">🗑 حذف</button></div></div>`;}).join('')}</div>`:''}</div>`:''}</div>`;
 }).join('');
 }
 async function editVisitHistoryLabResult(id){
@@ -3485,9 +3485,9 @@ function vsVisitList(pid){
   });
 }
 function vsItemHtml(kind,id,pid,title,sub,actions){
-  const act=(kind==='visit'&&actions)?`<button class="btn sm gray" type="button" onclick="event.stopPropagation();openVisitEdit('${id}')">✏️</button><button class="btn sm blue" type="button" onclick="event.stopPropagation();openVisitPrint('${id}')">🖨</button><button class="btn sm red" type="button" onclick="event.stopPropagation();openVisitDelete('${id}')">🗑</button>`
-    :(kind==='visit'?`<button class="btn sm blue" type="button" onclick="event.stopPropagation();openVisitPrint('${id}')">🖨</button>`
-    :`<button class="btn sm blue" type="button" onclick="event.stopPropagation();printPatientFileById('${pid}')">🖨</button>`);
+  const act=(kind==='visit'&&actions)?`<button class="btn sm gray" type="button" onclick="event.stopPropagation();openVisitEdit('${id}')">✏️ تعديل</button><button class="btn sm blue" type="button" onclick="event.stopPropagation();openVisitPrint('${id}')">🖨 طباعة</button><button class="btn sm red" type="button" onclick="event.stopPropagation();openVisitDelete('${id}')">🗑 حذف</button>`
+    :(kind==='visit'?`<button class="btn sm blue" type="button" onclick="event.stopPropagation();openVisitPrint('${id}')">🖨 طباعة</button>`
+    :`<button class="btn sm blue" type="button" onclick="event.stopPropagation();printPatientFileById('${pid}')">🖨 طباعة</button>`);
   return `<div class="vs-item vs-${kind}" data-kind="${kind}" data-id="${esc(id)}" data-pid="${esc(pid)}">
   <div class="vs-head" onclick="vsToggle(this)">
     <div class="vs-title"><b>${title}</b><div class="vs-sub">${sub}</div></div>
@@ -3607,41 +3607,50 @@ function printPatientFileById(pid){
 `;
   document.head.appendChild(st);
 })();
+let visitsLimit=10;const vcOpen=new Map();
+function vcMore(){visitsLimit+=10;renderGlobalSavedVisits();}
+function vcMark(pid){const k=vcOpen.get(pid);document.querySelectorAll('[data-vc="'+pid+'"]').forEach(x=>x.classList.toggle('vc-on',x.dataset.k===k));}
+async function vcToggle(pid,kind){
+ const host=document.getElementById('vc-'+pid);if(!host)return;
+ if(vcOpen.get(pid)===kind){vcOpen.delete(pid);host.innerHTML='';vcMark(pid);return;}
+ vcOpen.set(pid,kind);vcMark(pid);
+ host.innerHTML='<div class="vs-loading">⏳ جارٍ التحميل...</div>';
+ if(kind==='visits'){
+  const ok=await loadVisitRecordsFor([pid]);
+  if(vcOpen.get(pid)!==kind)return;
+  if(!ok){vcOpen.delete(pid);host.innerHTML='';vcMark(pid);return;}
+  host.innerHTML=vsStackHtml(pid,{actions:true,withFile:false});
+ }else{
+  const p=(data.patients||[]).find(x=>x.id===pid)||{};
+  const has=!!(p.ogHistory&&Object.keys(p.ogHistory||{}).length);
+  host.innerHTML='<div class="vs-wrap">'+vsItemHtml('file','file-'+pid,pid,'📁 الملف الطبي الدائم',has?'بيانات المريضة الأساسية والتاريخ المرضي':'لم يتم حفظ بيانات الملف الطبي بعد',true)+'</div>';
+ }
+}
 async function renderGlobalSavedVisits(){
+ /* egress-saver: patients are already cached; visit records are fetched ONLY when "الزيارات" is pressed */
  const box=$('globalSavedVisitsList');
  if(!box)return;
- await loadAllVisitRecords();
- const rows=getVisitPagePatients();
+ const all=getVisitPagePatients();
  const showAll=!!$('visitsShowAll')?.checked;
  const dt=$('visitsDateFilter')?.value||todayStr();
- if(!rows.length){
-   box.innerHTML=`<div class="empty">${showAll?'لا توجد حالات مطابقة للبحث':'لا توجد حالات مسجلة في '+fmtDate(dt)}</div>`;
+ if(!all.length){
+   box.innerHTML=`<div class="empty">${showAll||visitsSearchTerm?'لا توجد حالات مطابقة للبحث':'لا توجد حالات مسجلة في '+fmtDate(dt)}</div>`;
    return;
  }
- box.innerHTML=rows.map((p,i)=>{
-   const saved=(data.medicalFiles||[])
-     .filter(mf=>mf.patientId===p.id&&mf.data&&mf.data.visit)
-     .sort((a,b)=>{
-       const ad=a.data.visit.visitDate||'',bd=b.data.visit.visitDate||'';
-       return bd.localeCompare(ad)||(b.data.visit.visitNumber||0)-(a.data.visit.visitNumber||0)||(b.timestamp||0)-(a.timestamp||0);
-     });
-   const latest=saved[0]?.data?.visit;
-   const visitHtml=vsStackHtml(p.id,{actions:true,withFile:true});
-   return `<div class="mf-item" style="cursor:default;align-items:flex-start;margin-bottom:10px;display:block">
+ const rows=all.slice(0,visitsLimit);
+ const flag=p=>(p.alarming?'<span class="chip" style="background:#dc2626;color:#fff" title="Alarming">⚠️</span> ':'')+(p.keyInfo?'<span class="chip" style="background:#ede9fe;color:#6d28d9" title="Key">🔑</span> ':'');
+ box.innerHTML=`<div class="vc-count">عرض ${rows.length} من ${all.length} حالة</div>`+rows.map((p,i)=>`<div class="mf-item vc-card" style="cursor:default;margin-bottom:10px;display:block">
      <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-       <div class="mf-info" style="min-width:220px">
-         <div class="mf-comment"><b>${i+1}. ${esc(p.name||'Patient')}</b> <span class="chip ${isNewVisit(p.visitType)?'exam':'followup'}">${esc(p.visitType||'—')}</span></div>
-         <div style="font-size:13px;margin-top:3px">🎯 ${esc(p.visitPurpose||'—')} ${p.time?' — ⏰ '+esc(fmtTime(p.time)):''}</div>
-         <div class="mf-date">${saved.length?`🗂️ ${saved.length} saved visit(s)${latest?' • Latest visit: '+fmtDate(latest.visitDate||''):''}`:'⚪ No saved visits yet'}</div>
-       </div>
-       <div class="mf-actions" style="display:flex;gap:5px;flex-wrap:wrap">
-         <button class="btn sm primary" type="button" onclick="event.stopPropagation();addVisitForPatient('${p.id}')">➕ Add Visit</button>
-         <button class="btn sm blue" type="button" onclick="event.stopPropagation();showPatientVisits('${p.id}')">📄 عرض الملف وكل الزيارات</button>
+       <div style="min-width:180px;flex:1"><b>${i+1}. ${esc(p.name||'Patient')}</b> ${flag(p)}</div>
+       <div style="display:flex;gap:6px;flex-wrap:wrap">
+         <button class="btn sm gray" type="button" data-vc="${p.id}" data-k="file" onclick="event.stopPropagation();vcToggle('${p.id}','file')">📁 الملف الطبي</button>
+         <button class="btn sm blue" type="button" data-vc="${p.id}" data-k="visits" onclick="event.stopPropagation();vcToggle('${p.id}','visits')">🗂️ الزيارات</button>
+         <button class="btn sm primary" type="button" onclick="event.stopPropagation();addVisitForPatient('${p.id}')">➕ زيارة</button>
        </div>
      </div>
-     ${visitHtml}
-   </div>`;
- }).join('');
+     <div id="vc-${p.id}"></div>
+   </div>`).join('')+(all.length>rows.length?`<div style="text-align:center;margin:12px 0"><button class="btn primary" type="button" onclick="vcMore()">⬇️ عرض المزيد (${all.length-rows.length} متبقية)</button></div>`:'');
+ for(const [pid,k] of [...vcOpen]){if(rows.some(p=>p.id===pid)){vcOpen.delete(pid);await vcToggle(pid,k);}else vcOpen.delete(pid);}
 }
 function openVisitView(id){
   // Build a completely fresh overlay and append it directly to <body> every
@@ -3711,7 +3720,7 @@ if(!has){box.innerHTML='<div class="empty">لا يوجد ملف طبي محفو�
 const savedAt=filePatient.ogHistorySavedAt||filePatient.updatedAt||filePatient.createdAt||Date.now();
 box.innerHTML=`<div class="mf-item" style="cursor:default;align-items:center;gap:10px">
 <div class="mf-info"><div class="mf-comment">📂 الملف الطبي الدائم — ${esc(filePatient.name||'')}</div><div class="mf-date">آخر حفظ: ${new Date(savedAt).toLocaleString('ar-EG')}</div></div>
-<div class="mf-actions" style="display:flex;gap:5px;flex-wrap:wrap"><button class="btn sm blue" onclick="viewCurrentMedicalFile()">👁 عرض</button><button class="btn sm gray" onclick="editMedicalFileNow()">✏️ تعديل</button><button class="btn sm blue" onclick="printPatientFile()">🖨</button></div></div>`;
+<div class="mf-actions" style="display:flex;gap:5px;flex-wrap:wrap"><button class="btn sm blue" onclick="viewCurrentMedicalFile()">👁 عرض</button><button class="btn sm gray" onclick="editMedicalFileNow()">✏️ تعديل</button><button class="btn sm blue" onclick="printPatientFile()">🖨 طباعة</button></div></div>`;
 }
 function editMedicalFileNow(){
 if(!filePatient){toast('❌ المريضة غير موجودة');return;}
@@ -4499,7 +4508,7 @@ if(andPrint&&savedId)printRx(savedId);
 function renderRxHistory(){
 const box=$('rxHistory');if(!rxPatient){box.innerHTML='';return;}
 const list=data.prescriptions.filter(r=>r.patientId===rxPatient.id).sort((a,b)=>(b.ts||0)-(a.ts||0));
-box.innerHTML=list.length?`<div class="rx-hist"><b style="font-size:13px">📜 Previous Prescriptions:</b>`+list.map(r=>`<div class="rx-hist-item"><span style="cursor:pointer;flex:1" onclick="viewRx('${r.id}')">🗓 ${r.date||''} — ${r.diagnosis?esc(r.diagnosis):'No dx'} (${(r.meds||[]).length} meds)</span><span style="display:flex;gap:4px"><button class="btn sm gray" onclick="event.stopPropagation();loadRxInto('${r.id}')">✏️</button><button class="btn sm blue" onclick="event.stopPropagation();viewRx('${r.id}')">👁</button><button class="btn sm blue" onclick="event.stopPropagation();printRx('${r.id}')">🖨</button><button class="btn sm red" onclick="event.stopPropagation();delRx('${r.id}')">🗑</button></span></div>`).join('')+`</div>`:'';
+box.innerHTML=list.length?`<div class="rx-hist"><b style="font-size:13px">📜 Previous Prescriptions:</b>`+list.map(r=>`<div class="rx-hist-item"><span style="cursor:pointer;flex:1" onclick="viewRx('${r.id}')">🗓 ${r.date||''} — ${r.diagnosis?esc(r.diagnosis):'No dx'} (${(r.meds||[]).length} meds)</span><span style="display:flex;gap:4px"><button class="btn sm gray" onclick="event.stopPropagation();loadRxInto('${r.id}')">✏️ تعديل</button><button class="btn sm blue" onclick="event.stopPropagation();viewRx('${r.id}')">👁</button><button class="btn sm blue" onclick="event.stopPropagation();printRx('${r.id}')">🖨 طباعة</button><button class="btn sm red" onclick="event.stopPropagation();delRx('${r.id}')">🗑 حذف</button></span></div>`).join('')+`</div>`:'';
 }
 function loadRxInto(id){
 const r=data.prescriptions.find(x=>x.id===id);if(!r||!rxPatient)return;
@@ -4782,7 +4791,7 @@ function renderMsgs(){
   if(!activePeer||!currentUser){box.innerHTML='<div class="empty">Select a person</div>';return;}
   const list=data.chat.filter(m=>inConvo(m,activePeer)).sort((a,b)=>(a.ts||0)-(b.ts||0));
   box.innerHTML=list.map(m=>{const mine=sentByMe(m);
-    return `<div class="msg ${mine?'me':'them'}">${esc(m.text)}<span class="mt">${esc(mine?'أنا':(m.fromName||''))} • ${new Date(m.ts||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}<button type="button" class="md" title="حذف الرسالة" onclick="delMsg('${esc(m.id)}')">🗑</button></span></div>`;
+    return `<div class="msg ${mine?'me':'them'}">${esc(m.text)}<span class="mt">${esc(mine?'أنا':(m.fromName||''))} • ${new Date(m.ts||Date.now()).toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'})}<button type="button" class="md" title="حذف الرسالة" onclick="delMsg('${esc(m.id)}')">🗑 حذف</button></span></div>`;
   }).join('')||'<div class="empty">ابدأ المحادثة</div>';
   box.scrollTop=box.scrollHeight;
 }
@@ -5046,10 +5055,10 @@ $('patType').onchange=e=>{patType=e.target.value;renderPatients();};
 $('patShowAll').onchange=e=>{patShowAll=e.target.checked;renderPatients();};
 $('patResetBtn').onclick=resetPatFilters;
 $('patExportBtn').onclick=exportExcel;
-$('visitsDateFilter').onchange=renderGlobalSavedVisits;
-$('visitsShowAll').onchange=renderGlobalSavedVisits;
-$('visitsPatientSearch').oninput=e=>{visitsSearchTerm=String(e.target.value||'').trim();renderGlobalSavedVisits();};
-$('visitsResetBtn').onclick=()=>{visitsSearchTerm='';if($('visitsPatientSearch'))$('visitsPatientSearch').value='';$('visitsDateFilter').value=todayStr();$('visitsShowAll').checked=false;renderGlobalSavedVisits();};
+$('visitsDateFilter').onchange=()=>{visitsLimit=10;renderGlobalSavedVisits();};
+$('visitsShowAll').onchange=()=>{visitsLimit=10;renderGlobalSavedVisits();};
+$('visitsPatientSearch').oninput=e=>{visitsSearchTerm=String(e.target.value||'').trim();visitsLimit=10;renderGlobalSavedVisits();};
+$('visitsResetBtn').onclick=()=>{visitsSearchTerm='';if($('visitsPatientSearch'))$('visitsPatientSearch').value='';$('visitsDateFilter').value=todayStr();$('visitsShowAll').checked=false;visitsLimit=10;renderGlobalSavedVisits();};
 if($('visitsDateFilter'))$('visitsDateFilter').value=todayStr();
 $('mfPatientSearchBtn').onclick=searchMedicalFilePatients;
 $('mfPatientSearch').onkeydown=e=>{if(e.key==='Enter'){e.preventDefault();searchMedicalFilePatients();}};
@@ -5511,6 +5520,294 @@ function init(){
 }
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
 })();
+</script>
+<style id="visit-editor-clarity">
+/* KEY/ALARM always fully visible; never clipped or shrunk */
+#visitEditModal .modal-box>*{flex-shrink:0}
+#visitEditKA{flex:none!important;max-height:none!important;overflow:visible!important;margin-bottom:10px}
+#visitEditKA .mf-ka{display:grid!important;margin:0 0 10px!important}
+#visitEditKA .mf-key,#visitEditKA .mf-alarm{max-height:none!important;overflow:visible!important;white-space:pre-wrap!important;word-break:break-word!important;font-size:14px!important}
+#visitEditArea .key-banner textarea{min-height:96px;overflow:hidden}
+/* visit data + save: a clear, static card at the END (after everything to record) */
+#visitEditModal #pfVisitSaveTop{display:none!important}
+#visitEditModal #pfNewVisitBar{position:static!important;order:99!important;margin-top:16px!important;border:2px solid #be185d;background:#fff1f7;padding:14px!important}
+#visitEditModal #pfNewVisitBar::before{content:"📝 بيانات الزيارة وحفظها";display:block;font-weight:800;font-size:16px;color:#be185d;margin-bottom:10px;padding-bottom:6px;border-bottom:1px dashed #f9a8d4}
+#visitEditModal #pfNewVisitBar #saveQuickVisitBtn{flex:1;font-size:16px;padding:13px}
+#visitSaveFab{display:none;position:fixed;bottom:16px;left:16px;z-index:10060;border-radius:999px;box-shadow:0 6px 18px rgba(0,0,0,.28);padding:12px 18px}
+#visitEditModal.open #visitSaveFab{display:block}
+.vc-on{outline:2px solid #be185d;outline-offset:1px}.vc-count{font-size:13px;color:#64748b;margin:0 0 8px}
+</style>
+<script>
+/* Ctrl/Cmd+S saves the open visit; key textarea auto-grows */
+document.addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'&&document.querySelector('#visitEditModal.open')){e.preventDefault();try{saveQuickVisit();}catch(_){}}});
+document.addEventListener('input',e=>{const t=e.target;if(t&&t.id==='og_keyNotes'){t.style.height='auto';t.style.height=t.scrollHeight+'px';}});
+</script>
+<style id="hx-smart">
+#visitEditModal #hxPanel{order:-3;display:grid;gap:8px;margin-bottom:10px;direction:rtl;text-align:right}
+.hx-sum{background:#eef2ff;border:1.5px solid #6366f1;border-radius:10px;padding:8px 10px;font-size:14px}
+.hx-box{background:#f0fdfa;border:1.5px solid #14b8a6;border-radius:10px;padding:8px 10px;font-size:14px;display:grid;gap:6px}
+.hx-g{display:flex;gap:14px;flex-wrap:wrap}.hx-warn{background:#fef2f2;border:1.5px solid #dc2626;color:#7f1d1d;border-radius:10px;padding:8px 10px;font-size:14px;line-height:1.7}
+.hx-act{display:flex;gap:6px;flex-wrap:wrap}.hx-due{background:#fff7ed;border:1.5px solid #f97316;border-radius:10px;padding:8px 10px;margin-bottom:10px}.hx-due summary{font-weight:800;cursor:pointer}
+.hx-row{display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap;padding:6px 0;border-top:1px dashed #fdba74}
+.hx-dash{background:#fff;border:1.5px solid #6366f1;border-radius:12px;padding:12px;margin-bottom:14px;display:grid;gap:10px}.hx-dash h3{margin:0}
+.hx-kpi{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}.hx-kpi div{background:#eef2ff;border-radius:10px;padding:8px;text-align:center;font-size:12px;color:#475569}.hx-kpi b{display:block;font-size:22px;color:#4338ca}
+.hx-bars{display:flex;gap:8px;align-items:flex-end;height:96px}.hx-bars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end}.hx-bars i{display:block;width:100%;background:#6366f1;border-radius:4px 4px 0 0;min-height:2px}.hx-bars small{font-size:10px;color:#64748b}
+</style>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const LS={g(k,d){try{const v=localStorage.getItem(k);return v==null?d:JSON.parse(v);}catch(_){return d;}},s(k,v){try{localStorage.setItem(k,JSON.stringify(v));}catch(_){}} ,r(k){try{localStorage.removeItem(k);}catch(_){}}};
+const E=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today=()=>new Date().toISOString().slice(0,10);
+const addDays=(d,n)=>{const x=new Date(d+'T12:00:00');x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);};
+const diffDays=(a,b)=>Math.round((new Date(a+'T12:00:00')-new Date(b+'T12:00:00'))/864e5);
+const open=()=>!!document.querySelector('#visitEditModal.open');
+const val=id=>($(id)&&$(id).value)||'';
+const P=()=>{try{return filePatient;}catch(_){return null;}};
+const wa=(ph,txt)=>'https://wa.me/'+String(ph||'').replace(/[^0-9]/g,'').replace(/^0/,'20')+'?text='+encodeURIComponent(txt);
+/* ---------- knowledge ---------- */
+const PREG_UNSAFE=['warfarin','isotretinoin','roaccutane','methotrexate','misoprostol','cytotec','enalapril','captopril','lisinopril','ramipril','losartan','valsartan','atorvastatin','rosuvastatin','simvastatin','tetracycline','doxycycline','ribavirin','thalidomide','valproate','depakine','letrozole','femara','clomiphene','clomid','ibuprofen','diclofenac','voltaren','brufen','naproxen'];
+const LABS=[['tsh',.4,4,'TSH'],['free t4',.8,1.8,'FT4'],['prolactin',2,25,'Prolactin'],['amh',1,10,'AMH'],['hb',12,16,'Hb'],['hemoglobin',12,16,'Hb'],['glucose',70,100,'Glucose'],['fbs',70,100,'FBS'],['hba1c',0,5.7,'HbA1c'],['ferritin',15,200,'Ferritin'],['vitamin d',30,100,'Vit D']];
+const SNIP={'/nl':'Normal examination, no abnormal findings.','/pcos':'PCOS: oligo/anovulation, polycystic ovaries on US. Plan: weight reduction, ovulation induction, metformin as indicated.','/anc':'Antenatal follow-up: fetal movements good, no bleeding, no leaking, no headache or visual disturbance.','/fol':'Folliculometry: follow-up scan after 2 days, hCG trigger when leading follicle reaches 18-20 mm and endometrium >= 8 mm.','/inf':'Primary infertility. Plan: HSG, semen analysis, hormonal profile, ovulation monitoring.','/fu':'Follow-up visit: improving, continue same treatment.'};
+const snips=()=>({});
+/* ---------- helpers on current visit ---------- */
+function ga(){const l=LS.g('hx_lmp_'+(P()||{}).id,'');if(!l)return null;const vd=val('og_visitDate')||today();const d=diffDays(vd,l);if(d<0||d>300)return null;return{lmp:l,d,w:Math.floor(d/7),r:d%7,edd:addDays(l,280)};}
+function lastVisits(){const p=P();if(!p)return[];return(data.medicalFiles||[]).filter(m=>m.patientId===p.id&&m.data&&m.data.visit).sort((a,b)=>String(b.data.visit.visitDate||'').localeCompare(String(a.data.visit.visitDate||''))||(b.timestamp||0)-(a.timestamp||0));}
+function folMax(s){const n=(String(s||'').match(/\d+(\.\d+)?/g)||[]).map(Number).filter(x=>x>=5&&x<=45);return n.length?Math.max(...n):null;}
+function warnings(){
+ const w=[],p=P()||{};
+ const live=(data.patients||[]).find(x=>x.id===p.id)||p;
+ const ka=((val('og_keyNotes'))+' '+(live.keyInfo||'')+' '+(live.alarming||'')).toLowerCase();
+ const drugs=(typeof mgmtDrugs!=='undefined'?mgmtDrugs:[]).map(d=>String(d.name||'').trim().toLowerCase()).filter(Boolean);
+ const m=val('og_antBp').match(/(\d{2,3})\s*[\/\\]\s*(\d{2,3})/);
+ if(m){const s=+m[1],d=+m[2];if(s>=160||d>=110)w.push('🔴 ضغط مرتفع جداً '+s+'/'+d+' — خطر تسمم حمل/طوارئ');else if(s>=140||d>=90)w.push('🟠 ضغط مرتفع '+s+'/'+d+' — اطلب بروتين بول وتابع');else if(s<90||d<50)w.push('🟠 ضغط منخفض '+s+'/'+d);}
+ if(/allerg|حساس/.test(ka)){const toks=[...new Set(ka.split(/[^a-z\u0600-\u06ff0-9]+/).filter(t=>t.length>=4&&!/allerg|حساس|alarm|drug|دواء|penic/.test(t)||/penic/.test(t)))];drugs.forEach(d=>{if(toks.some(t=>d.includes(t)||t.includes(d)||(/penic/.test(t)&&/amox|ampi|augmentin|penic|cilin/.test(d))))w.push('🔴 احتمال حساسية: "'+d+'" مذكور في Key/Alarming');});}
+ const preg=(typeof pendingVisitType!=='undefined'&&pendingVisitType==='Antenatal')||val('og_pregnant')==='Yes'||!!ga();
+ if(preg)drugs.forEach(d=>{if(PREG_UNSAFE.some(u=>d.includes(u)))w.push('🟠 "'+d+'" قد لا يكون آمناً في الحمل — راجع');});
+ const seen={};drugs.forEach(d=>{if(seen[d])w.push('🟡 دواء مكرر: '+d);seen[d]=1;});
+ const lv=lastVisits().find(v=>v.id!==(typeof editingVisitId!=='undefined'?editingVisitId:null));
+ const wt=parseFloat(val('og_antWt')),pw=lv?parseFloat(lv.data.visit.vitals&&lv.data.visit.vitals.wt):NaN;
+ if(wt&&pw){const dd=wt-pw;if(Math.abs(dd)>=4)w.push('🟡 تغيّر الوزن '+(dd>0?'+':'')+dd.toFixed(1)+' كجم عن آخر زيارة');}
+ return w;
+}
+/* ---------- smart panel ---------- */
+function panelHtml(){
+ const p=P();if(!p)return'';
+ const live=(data.patients||[]).find(x=>x.id===p.id)||p;let gp='';
+ try{const o=(getMedicalFileOnlyData(normalizedOg(live)).obstetric)||{};gp=['G','P','A','L','D','E'].map(k=>{const v=o[k.toLowerCase()+'Num'];return v!=null&&String(v).trim()!==''?k+v:'';}).filter(Boolean).join(' ');}catch(_){}
+ const lvs=lastVisits(),lv=lvs[0]&&lvs[0].data.visit;
+ let h='<div class="hx-sum">'+E(p.name||'')+(p.age?' — '+E(p.age)+' سنة':'')+(gp?' — '+E(gp):'')+(lv?' — آخر زيارة '+E(lv.visitDate||'')+(lv.impression?': '+E(lv.impression.slice(0,80)):''):' — <a href="#" onclick="hxLoad();return false">حمّل آخر الزيارات للمقارنة</a>')+'</div>';
+ const g=ga(),isAnt=(typeof pendingVisitType!=='undefined'&&pendingVisitType==='Antenatal')||val('og_pregnant')==='Yes'||g;
+ if(isAnt){
+  h+='<div class="hx-box"><b>🤰 حاسبة الحمل</b> آخر دورة (LMP): <input type="date" id="hxLmp" value="'+E(LS.g('hx_lmp_'+p.id,''))+'" onchange="hxSetLmp(this.value)">';
+  if(g){const w=g.w,tri=w<14?'الأول':w<28?'الثاني':'الثالث';let t='';
+   if(w<11)t='تأكيد الحمل بالسونار، CBC، فصيلة الدم، TSH، سكر صائم';else if(w<14)t='سونار NT + Double marker';else if(w<18)t='Triple/Quad marker، متابعة الضغط والوزن';else if(w<24)t='سونار تشوهات (18–23 أسبوع)';else if(w<28)t='OGTT سكر الحمل، CBC';else if(w<32)t='Anti-D لو Rh سالبة، سونار نمو، حركة الجنين';else if(w<37)t='سونار نمو + سائل + دوبلر، وضع الجنين';else t='تقييم وضع الجنين وخطة الولادة، متابعة أسبوعية';
+   const iv=w<28?28:w<36?14:7,nx=addDays(val('og_visitDate')||today(),iv);
+   h+='<div class="hx-g"><span>عمر الحمل: <b>'+w+' أسبوع و'+g.r+' يوم</b></span><span>الثلث: <b>'+tri+'</b></span><span>EDD: <b>'+g.edd+'</b></span></div><div>🧪 المطلوب الآن: '+E(t)+'</div><div>📅 الزيارة المقترحة بعد '+iv+' يوم ('+nx+') <button class="btn sm primary" type="button" onclick="hxSetNext(\''+nx+'\')">تعيين</button></div>';}
+  h+='</div>';}
+ const typ=typeof pendingVisitType!=='undefined'?pendingVisitType:'';
+ if(typ==='Folliculometry'){
+  const pts=lvs.slice().reverse().map(m=>({d:m.data.visit.visitDate,v:Math.max(folMax(m.data.visit.folliculometry&&m.data.visit.folliculometry.rightOvary)||0,folMax(m.data.visit.folliculometry&&m.data.visit.folliculometry.leftOvary)||0),e:parseFloat(m.data.visit.folliculometry&&m.data.visit.folliculometry.endo)||0})).filter(x=>x.v);
+  const cur=Math.max(folMax(val('og_folRight'))||0,folMax(val('og_folLeft'))||0),ce=parseFloat(val('og_folEndo'))||0;
+  const all=pts.concat(cur?[{d:val('og_visitDate')||today(),v:cur,e:ce}]:[]);
+  h+='<div class="hx-box"><b>🔬 Follicle analysis</b> <button class="btn sm blue" type="button" onclick="hxFolPreview()">📈 Preview</button>';
+  if(all.length>=2){const a=all[all.length-2],b=all[all.length-1],dd=Math.max(1,diffDays(b.d,a.d)),rate=(b.v-a.v)/dd;
+   h+='<div>Growth rate: <b>'+rate.toFixed(1)+' mm/day</b>'+(b.v<18&&rate>0.3?' — reaches 18 mm in about <b>'+Math.ceil((18-b.v)/rate)+' days</b> → next scan '+addDays(b.d,Math.max(1,Math.min(3,Math.ceil((18-b.v)/rate))))+' <button class="btn sm primary" type="button" onclick="hxSetNext(\''+addDays(b.d,Math.max(1,Math.min(3,Math.ceil((18-b.v)/rate))))+'\')">Set</button>':'')+'</div>';
+   const W=240,H=60,mx=Math.max(24,...all.map(x=>x.v)),xs=i=>10+i*(W-20)/Math.max(1,all.length-1),ys=v=>H-6-(v/mx)*(H-12);
+   h+='<svg viewBox="0 0 '+W+' '+H+'" width="240" height="60"><line x1="0" x2="'+W+'" y1="'+ys(18)+'" y2="'+ys(18)+'" stroke="#16a34a" stroke-dasharray="3"/><polyline fill="none" stroke="#be185d" stroke-width="2" points="'+all.map((x,i)=>xs(i)+','+ys(x.v)).join(' ')+'"/>'+all.map((x,i)=>'<circle cx="'+xs(i)+'" cy="'+ys(x.v)+'" r="3" fill="#be185d"/><text x="'+xs(i)+'" y="'+(ys(x.v)-5)+'" font-size="8" text-anchor="middle">'+x.v+'</text>').join('')+'</svg>';}
+  else h+='<div style="color:#64748b">Enter follicle sizes (e.g. 14x12). After two visits the chart and ovulation estimate appear.</div>';
+  if(cur>=18)h+='<div>✅ Reached ovulation size'+(ce&&ce<8?' — but endometrium is '+ce+' mm (<8)':'')+' — فكّر في الحقنة المفجّرة.</div>';
+  h+='</div>';}
+ const w=warnings();
+ h+=w.length?'<div class="hx-warn">'+w.map(E).join('<br>')+'</div>':'';
+ 
+ return h;
+}
+function render(){
+ const a=$('visitEditArea');if(!a)return;let pn=$('hxPanel');
+ if(!pn){pn=document.createElement('div');pn.id='hxPanel';a.insertBefore(pn,a.firstChild);}
+ const ae=document.activeElement;if(ae&&pn.contains(ae)&&ae.tagName==='INPUT')return;
+ pn.innerHTML=panelHtml();
+}
+window.hxSetLmp=v=>{const p=P();if(p)LS.s('hx_lmp_'+p.id,v);render();};
+window.hxSetNext=d=>{const i=$('og_nextVisitDate');if(i){i.value=d;i.dispatchEvent(new Event('change',{bubbles:true}));toast('📅 تم تعيين الموعد القادم');}};
+window.hxLoad=async()=>{const p=P();if(p){await loadVisitRecordsFor([p.id]);render();}};
+window.hxRepeat=async()=>{const p=P();if(!p)return;await loadVisitRecordsFor([p.id]);const m=lastVisits().find(v=>v.id!==(typeof editingVisitId!=='undefined'?editingVisitId:null));if(!m){toast('لا توجد زيارة سابقة');return;}
+ const v=m.data.visit,set=(id,x)=>{if($(id)&&x!=null){$(id).value=x;$(id).dispatchEvent(new Event('input',{bubbles:true}));}};
+ set('og_complaint',v.complaint);set('og_impression',v.impression);set('og_blankNotes',v.blankNotes);const mg=v.management||{};set('og_mgmtPlan',mg.treatmentPlan);
+ try{mgmtDrugs=JSON.parse(JSON.stringify(mg.drugs&&mg.drugs.length?mg.drugs:[{name:'',dose:'',note:''}]));renderMgmtDrugs();}catch(_){}
+ toast('📋 تم نسخ بيانات زيارة '+(v.visitDate||'')+' — عدّل ما تغيّر');render();};
+/* ---------- safety check before save ---------- */
+const _save=window.saveQuickVisit;
+window.saveQuickVisit=async function(){
+ const w=warnings().filter(x=>!x.startsWith('🟡'));
+ if(w.length&&!confirm('⚠️ تنبيهات قبل الحفظ:\n\n'+w.join('\n')+'\n\nهل تريد المتابعة والحفظ؟'))return;
+ const p=P(),nx=val('og_nextVisitDate'),before=open();
+ const r=await _save.apply(this,arguments);
+ if(before&&!open()&&p){LS.r(dk());const ix=LS.g('hx_next',{});if(nx)ix[p.id]={n:p.name,ph:p.phone,d:nx};else delete ix[p.id];LS.s('hx_next',ix);renderDue();}
+ return r;};
+/* ---------- drafts ---------- */
+const dk=()=>{const p=P();return 'hx_draft_'+(p?p.id:'')+'_'+(typeof pendingVisitType!=='undefined'?pendingVisitType:'');};
+let dirty=false,wasOpen=false,asked=false;
+document.addEventListener('input',e=>{if(e.isTrusted&&e.target.closest&&e.target.closest('#visitEditArea'))dirty=true;},true);
+document.addEventListener('change',e=>{if(e.isTrusted&&e.target.closest&&e.target.closest('#visitEditArea'))dirty=true;},true);
+function saveDraft(){if(!open()||!dirty||(typeof editingVisitId!=='undefined'&&editingVisitId)||!P())return;const o={};document.querySelectorAll('#visitEditArea [id]').forEach(el=>{if(/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)&&el.id!=='hxLmp'){if(el.type==='checkbox')o[el.id]=el.checked;else if(el.value!=='')o[el.id]=el.value;}});LS.s(dk(),{t:Date.now(),o,drugs:typeof mgmtDrugs!=='undefined'?mgmtDrugs:[]});}
+function offerDraft(){const d=LS.g(dk(),null);if(!d||Date.now()-d.t>172800000||$('hxDraft'))return;const b=document.createElement('div');b.id='hxDraft';b.className='hx-warn';b.style.background='#eff6ff';b.style.color='#1e3a8a';b.innerHTML='📝 توجد مسودة غير محفوظة ('+new Date(d.t).toLocaleString('ar-EG')+') <button class="btn sm primary" type="button" id="hxD1">استرجاع</button> <button class="btn sm gray" type="button" id="hxD2">حذف</button>';$('hxPanel').appendChild(b);
+ $('hxD1').onclick=()=>{Object.entries(d.o).forEach(([id,v])=>{const el=$(id);if(!el)return;if(el.type==='checkbox')el.checked=v;else el.value=v;el.dispatchEvent(new Event('change',{bubbles:true}));});try{mgmtDrugs=d.drugs;renderMgmtDrugs();}catch(_){}b.remove();toast('تم استرجاع المسودة');};
+ $('hxD2').onclick=()=>{LS.r(dk());b.remove();};}
+/* ---------- labs abnormal highlight ---------- */
+function labs(){document.querySelectorAll('#visitEditArea .lab-inline').forEach(r=>{const t=(r.getAttribute('data-test')||'').toLowerCase(),i=r.querySelector('.lab-result');if(!i)return;const x=parseFloat(String(i.value).replace(',','.')),L=LABS.find(l=>t.includes(l[0]));if(!L||isNaN(x)){i.style.cssText=i.style.cssText.replace(/border-color:[^;]*;?|background:[^;]*;?/g,'');i.title='';return;}
+ const bad=x<L[1]||x>L[2];i.style.borderColor=bad?'#dc2626':'#16a34a';i.style.background=bad?'#fee2e2':'#f0fdf4';i.title=(bad?'خارج المدى ':'طبيعي ')+L[1]+' – '+L[2];});}
+/* ---------- voice + snippets ---------- */
+let rec=null,tgt=null;document.addEventListener('focusin',e=>{if(/^(TEXTAREA|INPUT)$/.test(e.target.tagName)&&e.target.type!=='date'&&e.target.type!=='checkbox')tgt=e.target;});
+window.hxVoice=()=>{const SR=window.SpeechRecognition||window.webkitSpeechRecognition;if(!SR){toast('المتصفح لا يدعم الإملاء الصوتي');return;}
+ if(rec){rec.stop();return;}if(!tgt){toast('اضغط داخل خانة نصية أولاً ثم الإملاء');return;}
+ rec=new SR();rec.lang='ar-EG';rec.continuous=true;rec.interimResults=false;const b=$('hxMic');if(b)b.textContent='⏹ إيقاف';
+ rec.onresult=e=>{let s='';for(let i=e.resultIndex;i<e.results.length;i++)s+=e.results[i][0].transcript+' ';tgt.value=(tgt.value?tgt.value+' ':'')+s.trim();tgt.dispatchEvent(new Event('input',{bubbles:true}));};
+ rec.onend=()=>{rec=null;const b=$('hxMic');if(b)b.textContent='🎤 إملاء';};rec.start();};
+document.addEventListener('input',e=>{const t=e.target;if(!t||!/^(TEXTAREA|INPUT)$/.test(t.tagName)||t.type==='date')return;const m=t.value.match(/(\/[a-z0-9]+)[ \n]$/i);if(m){const s=snips()[m[1].toLowerCase()];if(s){t.value=t.value.slice(0,t.value.length-m[0].length)+s+' ';t.dispatchEvent(new Event('change',{bubbles:true}));}}});
+window.hxSnipEdit=()=>{const l=Object.keys(snips()).join('  ');const x=prompt('القوالب الحالية: '+l+'\n\nأضف قالب جديد بصيغة:  /اختصار=النص\n(اكتب الاختصار ثم مسافة داخل أي خانة ليتحول للنص)');if(!x)return;const m=x.match(/^\s*(\/[a-z0-9]+)\s*=\s*([\s\S]+)$/i);if(!m){toast('الصيغة غير صحيحة');return;}const c=LS.g('hx_snips',{});c[m[1].toLowerCase()]=m[2].trim();LS.s('hx_snips',c);toast('✅ تم حفظ القالب '+m[1]);};
+/* ---------- overdue / reminders (local index, zero egress) ---------- */
+function renderDue(){
+ const host=$('globalSavedVisitsList');if(!host)return;let b=$('hxDue');if(!b){b=document.createElement('div');b.id='hxDue';host.parentNode.insertBefore(b,host);}
+ const ix=LS.g('hx_next',{}),t=today(),L=Object.entries(ix).map(([id,o])=>({id,...o,late:diffDays(t,o.d)})).filter(x=>x.late>=-1).sort((a,b)=>b.late-a.late);
+ if(!L.length){b.innerHTML='';return;}
+ b.innerHTML='<details class="hx-due"'+(L.some(x=>x.late>0)?' open':'')+'><summary>⏰ متابعات ('+L.filter(x=>x.late>0).length+' متأخرة — '+L.filter(x=>x.late<=0).length+' قريبة)</summary>'+L.map(x=>'<div class="hx-row"><span><b>'+E(x.n)+'</b> — '+(x.late>0?'<span style="color:#dc2626">متأخرة '+x.late+' يوم</span>':x.late===0?'اليوم':'غداً')+' ('+E(x.d)+')</span><span>'+(x.ph?'<a class="btn sm primary" target="_blank" href="'+wa(x.ph,'أهلاً '+x.n+'، '+(x.late>0?'لاحظنا تأخرك عن موعد المتابعة بتاريخ '+x.d+'، برجاء التواصل لحجز موعد جديد.':'نذكّرك بموعد متابعتك '+(x.late===0?'اليوم':'غداً')+' بتاريخ '+x.d+'.'))+'">💬 واتساب</a> ':'')+'<button class="btn sm gray" type="button" onclick="hxDone(\''+x.id+'\')">تم</button></span></div>').join('')+'</details>';}
+window.hxDone=id=>{const ix=LS.g('hx_next',{});delete ix[id];LS.s('hx_next',ix);renderDue();};
+/* ---------- dashboard (cached data only) ---------- */
+function dash(){return;
+ const s=$('tab-stats');if(!s||s.hidden)return;let d=$('hxDash');if(!d){d=document.createElement('div');d.id='hxDash';s.insertBefore(d,s.firstChild);}
+ const pts=data.patients||[],t=today(),set=data.settings||{},isN=p=>{try{return isNewVisit(p.visitType);}catch(_){return false;}};
+ const td=pts.filter(p=>p.date===t),nw=td.filter(isN).length,fu=td.length-nw,rev=nw*(+set.examPrice||0)+fu*(+set.followupPrice||0);
+ const days=[...Array(7)].map((_,i)=>{const k=addDays(t,i-6);return{k,n:pts.filter(p=>p.date===k).length};}),mx=Math.max(1,...days.map(x=>x.n));
+ const m30=pts.filter(p=>p.date&&diffDays(t,p.date)<=30&&diffDays(t,p.date)>=0),src={};m30.forEach(p=>{const k=p.sourceCategory||'غير محدد';src[k]=(src[k]||0)+1;});
+ const hr={};m30.forEach(p=>{if(p.time){const h=p.time.slice(0,2);hr[h]=(hr[h]||0)+1;}});const peak=Object.entries(hr).sort((a,b)=>b[1]-a[1]).slice(0,3).map(x=>x[0]+':00').join('، ');
+ const w=td.filter(p=>p.calledAt&&p.createdAt).map(p=>(p.calledAt-p.createdAt)/60000).filter(x=>x>=0&&x<600),aw=w.length?Math.round(w.reduce((a,b)=>a+b,0)/w.length):null;
+ d.innerHTML='<div class="hx-dash"><h3>🧠 لوحة الذكاء اليومية</h3><div class="hx-kpi"><div><b>'+td.length+'</b>حالات اليوم</div><div><b>'+nw+'</b>كشف</div><div><b>'+fu+'</b>متابعة</div><div><b>'+rev+'</b>دخل اليوم</div><div><b>'+(aw==null?'—':aw+' د')+'</b>متوسط الانتظار</div></div>'
+ +'<div class="hx-bars">'+days.map(x=>'<div><i style="height:'+Math.round(x.n/mx*60)+'px"></i><small>'+x.n+'</small><small>'+x.k.slice(5)+'</small></div>').join('')+'</div>'
+ +'<div>⏱ أزحم الساعات (30 يوم): <b>'+(peak||'—')+'</b></div><div>📣 مصادر المرضى (30 يوم): '+Object.entries(src).sort((a,b)=>b[1]-a[1]).map(([k,v])=>'<span class="chip">'+E(k)+' '+v+' ('+Math.round(v/m30.length*100)+'%)</span>').join(' ')+'</div></div>';}
+/* ---------- duplicate detection at registration ---------- */
+document.addEventListener('change',e=>{const t=e.target;if(!t||(t.id!=='reg_phone'&&t.id!=='reg_name'))return;const ph=String($('reg_phone')&&$('reg_phone').value||'').replace(/\D/g,'').slice(-10),nm=String($('reg_name')&&$('reg_name').value||'').trim();
+ let f=null;try{f=(data.patients||[]).find(p=>(ph.length>=9&&String(p.phone||'').replace(/\D/g,'').slice(-10)===ph)||(nm.length>3&&normAr(p.name)===normAr(nm)));}catch(_){}
+ if(f)toast('⚠️ توجد حالة مسجلة بنفس '+((String(f.phone||'').replace(/\D/g,'').slice(-10)===ph)?'الرقم':'الاسم')+': '+f.name+' — استخدم الاقتراح بدل تسجيل مكرر');});
+/* ---------- loop ---------- */
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.tab'))setTimeout(()=>{dash();renderDue();},60);});
+setInterval(()=>{try{const o=open();if(o&&!wasOpen){dirty=false;asked=false;const old=$('hxPanel');if(old)old.remove();render();offerDraft();}
+ if(o){render();labs();saveDraft();}wasOpen=o;}catch(e){console.error('hx',e);}},1800);
+setInterval(()=>{try{dash();}catch(_){}},60000);
+setTimeout(()=>{try{renderDue();}catch(_){}},2500);
+})();
+</script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const uidk=()=>{try{return currentUser&&currentUser.id||'';}catch(_){return'';}};
+const QK='hx_q',FK=()=>'hx_full:'+uidk();
+let Q=[],busy=false,lastSig='';
+async function loadQ(){try{Q=(await idbGet(QK))||[];}catch(_){Q=[];}badge();}
+async function saveQ(){try{await idbSet(QK,Q);}catch(_){}badge();}
+function badge(){let b=$('hxNet');if(!b){b=document.createElement('div');b.id='hxNet';b.style.cssText='position:fixed;top:6px;left:50%;transform:translateX(-50%);z-index:100000;padding:5px 12px;border-radius:999px;font-size:13px;font-weight:700;box-shadow:0 3px 10px rgba(0,0,0,.25);display:none;cursor:pointer';b.onclick=()=>sync(true);document.body.appendChild(b);}
+ const off=!navigator.onLine;if(off){b.style.cssText+=';display:block;background:#b91c1c;color:#fff';b.textContent='📴 أوفلاين'+(Q.length?' — '+Q.length+' تعديل بالانتظار':'');}
+ else if(Q.length){b.style.cssText+=';display:block;background:#f59e0b;color:#000';b.textContent='⏳ مزامنة '+Q.length+' تعديل... (اضغط للإعادة)';}else b.style.display='none';}
+/* offline-aware writes */
+const _put=window.dbPut,_del=window.dbDel;
+window.dbPut=async function(store,rec){
+ if(navigator.onLine)return _put.apply(this,arguments);
+ const a=data[store];if(!Array.isArray(a))throw new Error('Unknown data store: '+store);
+ const i=a.findIndex(r=>r.id===rec.id);if(i>=0)a[i]=rec;else a.push(rec);
+ Q=Q.filter(x=>!(x.op==='put'&&x.store===store&&x.id===rec.id));Q.push({op:'put',store,id:rec.id,rec,t:Date.now()});await saveQ();renderAll();toast('📴 حُفظ على الجهاز وسيُرسل عند عودة الإنترنت');return true;};
+window.dbDel=async function(store,id){
+ if(navigator.onLine)return _del.apply(this,arguments);
+ const a=data[store];const i=a.findIndex(r=>r.id===id);if(i<0)return false;a.splice(i,1);
+ Q=Q.filter(x=>!(x.store===store&&x.id===id));Q.push({op:'del',store,id,t:Date.now()});await saveQ();renderAll();toast('📴 الحذف سيُنفَّذ عند عودة الإنترنت');return true;};
+async function sync(manual){
+ if(busy||!Q.length||!navigator.onLine||!sb)return;busy=true;let n=0;
+ try{while(Q.length){const x=Q[0],tb=STORE_TABLE[x.store];
+  const r=x.op==='put'?await sb.from(tb).upsert(toRow(x.store,x.rec)):await sb.from(tb).delete().eq('id',x.id);
+  if(r.error)throw r.error;Q.shift();n++;await saveQ();}
+  if(n)toast('✅ تمت مزامنة '+n+' تعديل أوفلاين');}
+ catch(e){console.error('offline sync',e);toast('⚠️ تعذرت المزامنة: '+(e.message||'خطأ')+' — ستُعاد المحاولة');}
+ busy=false;badge();}
+/* offline reads: full local snapshot */
+async function snap(){try{if(!navigator.onLine||!uidk()||!(data.patients||[]).length)return;
+ const sig=['patients','visits','medicalFiles','prescriptions','labResults','drugPackages','drugLibrary','staffProfiles'].map(k=>(data[k]||[]).length).join('-')+(JSON.stringify(data.settings||{}).length);
+ if(sig===lastSig)return;lastSig=sig;await idbSet(FK(),{t:Date.now(),d:data});}catch(e){console.warn('snap',e);}}
+const _load=window.loadAll;
+window.loadAll=async function(){
+ if(!navigator.onLine){try{const s=await idbGet(FK());if(s&&s.d){Object.keys(s.d).forEach(k=>{data[k]=s.d[k];});renderAll();toast('📴 وضع أوفلاين — آخر نسخة محفوظة ('+new Date(s.t).toLocaleString('ar-EG')+')');return;}}catch(_){}}
+ const r=await _load.apply(this,arguments);setTimeout(snap,4000);setTimeout(()=>sync(),1500);return r;};
+/* local backup (device download; the full-records option fetches once on request) */
+window.hxBackup=async function(full){
+ if(full){if(!navigator.onLine||!confirm('سيحمّل كل سجلات الزيارات من السيرفر مرة واحدة (استهلاك egress لمرة واحدة). متابعة؟'))return;
+  try{const{data:rows,error}=await pagedRows(()=>sb.from('clinical_visits').select('*'));if(error)throw error;(rows||[]).map(r=>fromRow('medicalFiles',r)).forEach(rec=>{const k=data.medicalFiles.findIndex(x=>x.id===rec.id);if(k>=0)data.medicalFiles[k]=rec;else data.medicalFiles.push(rec);});}catch(e){toast('❌ '+(e.message||'فشل التحميل'));return;}}
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({exportedAt:new Date().toISOString(),data},null,1)],{type:'application/json'}));a.download='clinic-backup-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);toast('💾 تم تنزيل النسخة الاحتياطية');};
+function settingsCard(){const s=$('tab-settings');if(!s||$('hxBk'))return;const d=document.createElement('div');d.id='hxBk';d.className='set-card';d.innerHTML='<h3>🛡️ النسخ الاحتياطي والأوفلاين</h3><p style="font-size:13px;color:#64748b">النسخة تُحفظ كملف على جهازك فقط. وضع الأوفلاين يحتفظ بآخر بيانات محمّلة ويرسل تعديلاتك تلقائياً عند عودة النت.</p><button class="btn primary" type="button" onclick="hxBackup(false)">💾 نسخة من البيانات المحمّلة</button> <button class="btn gray" type="button" onclick="hxBackup(true)">📦 نسخة كاملة (تحميل كل الزيارات)</button>';s.insertBefore(d,s.firstChild);}
+window.addEventListener('online',()=>{badge();setTimeout(sync,1200);});window.addEventListener('offline',badge);
+document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('.tab'))setTimeout(settingsCard,80);});
+setInterval(()=>{badge();snap();if(Q.length&&navigator.onLine)sync();},30000);
+loadQ().then(()=>{badge();setTimeout(settingsCard,1500);});
+if('serviceWorker' in navigator&&/^https?:/.test(location.protocol))navigator.serviceWorker.register('sw.js').catch(()=>{});
+})();
+</script>
+<style>.fol-add{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin:4px 0}.fol-add input{flex:1;min-width:140px}
+#hxNav{position:fixed;right:10px;top:calc(8px + env(safe-area-inset-top,0px));z-index:100001;display:flex;gap:6px;direction:rtl}
+#hxNav button{box-shadow:0 4px 12px rgba(0,0,0,.28);border-radius:999px;font-size:14px;padding:10px 14px}#hxNav button:disabled{opacity:.4}
+@media print{#hxNav{display:none}}</style>
+<script>
+function hxAddFol(inp,ta){const i=document.getElementById(inp),t=document.getElementById(ta);if(!i||!t)return;const v=parseFloat(i.value);if(!(v>0)){toast('Enter follicle size in mm');return;}t.value=(t.value.trim()?t.value.trim()+', ':'')+v+' mm';i.value='';i.focus();t.dispatchEvent(new Event('input',{bubbles:true}));}
+function hxClrFol(ta){const t=document.getElementById(ta);if(t){t.value='';t.dispatchEvent(new Event('input',{bubbles:true}));}}
+(function(){
+const H=[],st={i:-1,nav:false};
+const cur=()=>{const a=document.querySelector('nav .tab.active');return a?a.getAttribute('data-tab'):'reception';};
+H.push(cur());st.i=0;
+function go(t){const b=document.querySelector('.tab[data-tab="'+t+'"]');if(b){st.nav=true;b.click();st.nav=false;}}
+function closeTop(){const fo=document.getElementById('hxFolOv');if(fo){fo.remove();return true;}const ov=document.getElementById('mfViewDynOverlay');if(ov){const b=ov.querySelector('#mfViewDynCloseBtn');if(b){b.click();return true;}}
+ const m=[...document.querySelectorAll('.modal.open')].pop();if(m){const x=m.querySelector('[data-close]');if(x){x.click();return true;}}return false;}
+function upd(){const b=document.getElementById('hxBack'),f=document.getElementById('hxFwd');if(b)b.disabled=!(st.i>0)&&!document.querySelector('.modal.open,#mfViewDynOverlay');if(f)f.disabled=!(st.i<H.length-1);}
+document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('.tab[data-tab]');if(!t||st.nav)return;const n=t.getAttribute('data-tab');if(n===H[st.i])return;H.length=st.i+1;H.push(n);st.i=H.length-1;setTimeout(upd,50);},true);
+const nav=document.createElement('div');nav.id='hxNav';
+nav.innerHTML='<button class="btn primary" id="hxBack" type="button">↩ رجوع</button>';
+document.body.appendChild(nav);
+document.getElementById('hxBack').onclick=()=>{if(closeTop()){setTimeout(upd,80);return;}if(st.i>0){st.i--;go(H[st.i]);upd();}};
+setInterval(upd,700);upd();
+})();
+</script>
+<script>
+function hxFolPreview(){
+ const num=t=>{const n=(String(t||'').match(/\d+(\.\d+)?/g)||[]).map(Number).filter(x=>x>=5&&x<=45);return n.length?Math.max(...n):null;};
+ const endo=t=>{const m=String(t||'').match(/\d+(\.\d+)?/);return m?parseFloat(m[0]):null;};
+ const V=(id)=>(document.getElementById(id)||{}).value||'';
+ let pts=[],sample=false;
+ try{pts=(data.medicalFiles||[]).filter(m=>m.patientId===filePatient.id&&m.data&&m.data.visit&&m.data.visit.folliculometry).map(m=>{const v=m.data.visit,f=v.folliculometry;return{d:v.visitDate||'',r:num(f.rightOvary),l:num(f.leftOvary),e:endo(f.endo),rt:f.rightOvary,lt:f.leftOvary,et:f.endo};}).filter(x=>x.r||x.l||x.e).sort((a,b)=>a.d.localeCompare(b.d));}catch(_){}
+ if(num(V('og_folRight'))||num(V('og_folLeft'))||endo(V('og_folEndo')))pts.push({d:(V('og_visitDate')||new Date().toISOString().slice(0,10))+' (now)',r:num(V('og_folRight')),l:num(V('og_folLeft')),e:endo(V('og_folEndo')),rt:V('og_folRight'),lt:V('og_folLeft'),et:V('og_folEndo')});
+ if(!pts.length){sample=true;const t0=new Date(),dd=n=>{const x=new Date(t0);x.setDate(x.getDate()+n);return x.toISOString().slice(0,10);};
+  pts=[[0,10,9,6],[2,13,10,7],[4,17,11,8.5],[6,22,12,10],[28,9,11,6],[30,12,14,7.5],[32,14,18,9],[34,15,21,10.5]].map(a=>({d:dd(a[0]),r:a[1],l:a[2],e:a[3],rt:a[1]+' mm',lt:a[2]+' mm',et:a[3]+' mm'}));}
+ let proj=false,rate=1.7;
+ if(!sample){const last=pts[pts.length-1],prev=pts.length>1?pts[pts.length-2]:null,dayOf=s=>new Date(String(s).slice(0,10)+'T12:00:00');
+  if(prev){const dd=Math.round((dayOf(last.d)-dayOf(prev.d))/864e5),g=Math.max(last.r||0,last.l||0)-Math.max(prev.r||0,prev.l||0);if(dd>0&&g>0)rate=Math.min(3,Math.max(0.8,g/dd));}
+  const base=Math.max(last.r||0,last.l||0);
+  if(base&&base<24){proj=true;for(let t=2;t<=20;t+=2){const x=dayOf(last.d);x.setDate(x.getDate()+t);const f=v=>v?Math.min(24,+(v+rate*t).toFixed(1)):null,r=f(last.r),l=f(last.l),e=last.e?Math.min(12,+(last.e+0.4*t).toFixed(1)):null;pts.push({d:x.toISOString().slice(0,10),r:r,l:l,e:e,rt:r?r+' mm (est.)':'',lt:l?l+' mm (est.)':'',et:e?e+' mm (est.)':'',p:true});if(Math.max(r||0,l||0)>=24)break;}}}
+ const W=620,H=270,L=40,B=34,T=14,R=14,mx=Math.max(26,...pts.map(x=>Math.max(x.r||0,x.l||0,x.e||0)))+2,
+  X=i=>L+i*(W-L-R)/Math.max(1,pts.length-1),Y=v=>H-B-(v/mx)*(H-B-T);
+ const line=(k,c,dash)=>{const real=[],pr=[];pts.forEach((x,i)=>{if(x[k])(x.p?pr:real).push([X(i),Y(x[k]),x[k]]);});
+  const lr=real[real.length-1],prj=lr&&pr.length?[lr].concat(pr):pr;
+  const poly=(q,d)=>q.length>1?'<polyline fill="none" stroke="'+c+'" stroke-width="2.5" '+(d?'stroke-dasharray="5 4" opacity=".75" ':'')+'points="'+q.map(a=>a[0]+','+a[1]).join(' ')+'"/>':'';
+  const dots=(q,o)=>q.map(a=>'<circle cx="'+a[0]+'" cy="'+a[1]+'" r="'+(o?3:4.5)+'" fill="'+(o?'#fff':c)+'" stroke="'+c+'" stroke-width="2"/><text x="'+a[0]+'" y="'+(a[1]-8)+'" font-size="10" text-anchor="middle" fill="'+c+'">'+a[2]+'</text>').join('');
+  return poly(real)+poly(prj,true)+dots(real)+dots(pr,true);};
+ let grid='';for(let v=0;v<=mx;v+=5)grid+='<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#e2e8f0"/><text x="'+(L-6)+'" y="'+(Y(v)+3)+'" font-size="10" text-anchor="end" fill="#64748b">'+v+'</text>';
+ const xl=pts.map((x,i)=>'<text x="'+X(i)+'" y="'+(H-14)+'" font-size="9" text-anchor="middle" fill="#475569">'+String(x.d).slice(5,10)+'</text>').join('');
+ const svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:700px;background:#fff;border:1px solid #e2e8f0;border-radius:10px">'+grid+'<line x1="'+L+'" x2="'+(W-R)+'" y1="'+Y(18)+'" y2="'+Y(18)+'" stroke="#16a34a" stroke-dasharray="4"/><text x="'+(W-R)+'" y="'+(Y(18)-4)+'" font-size="10" text-anchor="end" fill="#16a34a">18 mm (ovulation size)</text>'+line('r','#be185d')+line('l','#0284c7')+line('e','#059669',true)+xl+'</svg>';
+ const rows=pts.map(x=>'<tr><td>'+x.d+'</td><td>'+(x.rt||'—')+'</td><td>'+(x.lt||'—')+'</td><td>'+(x.et||'—')+'</td></tr>').join('');
+ document.getElementById('hxFolOv')?.remove();
+ const o=document.createElement('div');o.id='hxFolOv';o.style.cssText='position:fixed;inset:0;z-index:100000;background:rgba(15,23,42,.72);display:flex;direction:ltr;text-align:left';
+ o.innerHTML='<div style="background:#f8fafc;width:100%;height:100%;overflow:auto;padding:16px"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px"><h3 style="margin:0">📈 Folliculometry timeline'+(sample?' — SAMPLE preview (~1 month)':'')+'</h3><button class="btn red" type="button" onclick="document.getElementById(\'hxFolOv\').remove()">✖ Close</button></div>'
+ +(sample?'<div style="background:#fef9c3;border:1px solid #facc15;border-radius:8px;padding:8px;margin-bottom:10px;font-size:14px">This is example data showing how the chart and table will look after about a month of visits (two cycles). Enter a follicle size (mm) in Right/Left ovary and this chart will project its growth from that number. Nothing is downloaded from the server.</div>':'')
+ +(proj?'<div style="background:#ecfeff;border:1px solid #22d3ee;border-radius:8px;padding:8px;margin-bottom:10px;font-size:14px">Projection from the size you entered: estimated growth ~'+rate.toFixed(1)+' mm/day (typical 1–2 mm/day) until ovulation size (~18–24 mm). Dashed line / empty dots = estimate, not a measurement. Enter the next real size at each visit and the estimate updates.</div>':'')+'<div style="font-size:13px;margin-bottom:6px"><span style="color:#be185d">● Right ovary</span> &nbsp; <span style="color:#0284c7">● Left ovary</span> &nbsp; <span style="color:#059669">◌ Endometrium</span></div>'+svg
+ +'<div style="overflow:auto;margin-top:12px"><table style="border-collapse:collapse;width:100%;background:#fff;font-size:14px"><thead><tr style="background:#eef2ff"><th style="padding:6px;border:1px solid #e2e8f0">Date</th><th style="padding:6px;border:1px solid #e2e8f0">Right ovary</th><th style="padding:6px;border:1px solid #e2e8f0">Left ovary</th><th style="padding:6px;border:1px solid #e2e8f0">Endometrium</th></tr></thead><tbody>'+rows.replace(/<td>/g,'<td style="padding:6px;border:1px solid #e2e8f0">')+'</tbody></table></div></div>';
+ document.body.appendChild(o);
+}
 </script>
 </body>
 </html>
