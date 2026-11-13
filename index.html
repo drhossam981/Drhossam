@@ -1390,19 +1390,22 @@ if(!name || !dose) return;
 saveDrugToLocalCache({name,dose,note});
 if(!currentUser || !currentUser.id) return;
 try{
-const {data:existing,error:findError}=await sb.from('drug_library').select('*').ilike('drug_name',name).ilike('dose',dose).limit(1);
-if(findError) throw findError;
-if(existing && existing.length){
-const row=existing[0];
-const {data:updated,error:updateError}=await sb.from('drug_library').update({drug_name:name,dose:dose,notes:note,updated_at:new Date().toISOString()}).eq('id',row.id).select().single();
+/* egress-saver: look the drug up in the already-loaded library; only talk to the server when it is new or changed */
+const ln=name.toLowerCase(),ld=dose.toLowerCase();
+const idx=sharedDrugLibrary.findIndex(x=>String(x.name||'').trim().toLowerCase()===ln&&String(x.dose||'').trim().toLowerCase()===ld);
+if(idx>=0){
+const cur=sharedDrugLibrary[idx];
+if(String(cur.name||'').trim()===name&&String(cur.note||'').trim()===note) return;
+const now=new Date().toISOString();
+const {error:updateError}=await sb.from('drug_library').update({drug_name:name,dose:dose,notes:note,updated_at:now}).eq('id',cur.id);
 if(updateError) throw updateError;
-const rec={id:updated.id,name:updated.drug_name||'',dose:updated.dose||'',note:updated.notes||'',createdBy:updated.created_by||null,createdAt:updated.created_at,updatedAt:updated.updated_at};
-const idx=sharedDrugLibrary.findIndex(x=>x.id===rec.id);
-if(idx>=0){sharedDrugLibrary[idx]=rec;}else{sharedDrugLibrary.push(rec);}
+sharedDrugLibrary[idx]={...cur,name:name,dose:dose,note:note,updatedAt:now};
+const di=(data.drugLibrary||[]).findIndex(x=>x.id===cur.id);if(di>=0)data.drugLibrary[di]={...data.drugLibrary[di],name:name,dose:dose,notes:note,updatedAt:now};
 }else{
-const {data:inserted,error:insertError}=await sb.from('drug_library').insert({drug_name:name,dose:dose,notes:note,created_by:currentUser.id}).select().single();
+const {data:inserted,error:insertError}=await sb.from('drug_library').insert({drug_name:name,dose:dose,notes:note,created_by:currentUser.id}).select('id,created_at,updated_at,created_by').single();
 if(insertError) throw insertError;
-sharedDrugLibrary.push({id:inserted.id,name:inserted.drug_name||'',dose:inserted.dose||'',note:inserted.notes||'',createdBy:inserted.created_by||null,createdAt:inserted.created_at,updatedAt:inserted.updated_at});
+sharedDrugLibrary.push({id:inserted.id,name:name,dose:dose,note:note,createdBy:inserted.created_by||null,createdAt:inserted.created_at,updatedAt:inserted.updated_at});
+if(Array.isArray(data.drugLibrary))data.drugLibrary.push({id:inserted.id,name:name,dose:dose,notes:note,createdAt:inserted.created_at,updatedAt:inserted.updated_at,createdBy:inserted.created_by||null});
 }
 }catch(error){console.error('Drug Library save failed:',error);toast('⚠️ Drug saved locally. Shared library update failed.');}
 }
@@ -1458,16 +1461,18 @@ if(existing>=0){pkgs[existing]=pkg;}else{pkgs.push(pkg);}
 localStorage.setItem(LS_PACKAGES,JSON.stringify(pkgs));
 renderMgmtPkgList();
 }
+/* keep what the user typed: read the live inputs (including empty rows) before re-rendering a drug list */
+function _grabDrugRows(listSel,prefix,fallback){const rows=document.querySelectorAll(listSel+' .rx-row');if(!rows.length)return fallback;return[...rows].map(r=>{const g=c=>{const el=r.querySelector('.'+prefix+'-'+c);return el?el.value.trim():'';};return{name:g('name'),dose:g('dose'),note:g('note')};});}
+function _focusLastDrugRow(listSel){try{const r=document.querySelectorAll(listSel+' .rx-row');const l=r[r.length-1];const i=l&&l.querySelector('input');if(i)i.focus();}catch(_){}}
 let mgmtDrugs=[];
 let mgmtLabs=[];
 let mgmtExtraLabs=[];
 function addMgmtDrugRow(drug){
 drug=drug||{name:'',dose:'',note:''};
-mgmtDrugs.push(drug);
-renderMgmtDrugs();
+mgmtDrugs=_grabDrugRows('#mgmtDrugsList','mgmt-drug',mgmtDrugs);mgmtDrugs.push(drug);renderMgmtDrugs();_focusLastDrugRow('#mgmtDrugsList');
 }
 function removeMgmtDrugRow(i){
-mgmtDrugs.splice(i,1);
+mgmtDrugs=_grabDrugRows('#mgmtDrugsList','mgmt-drug',mgmtDrugs);mgmtDrugs.splice(i,1);
 if(!mgmtDrugs.length)mgmtDrugs.push({name:'',dose:'',note:''});
 renderMgmtDrugs();
 }
@@ -1604,11 +1609,10 @@ let baseMgmtLabs=[];
 let baseMgmtExtraLabs=[];
 function addBaseMgmtDrugRow(drug){
 drug=drug||{name:'',dose:'',note:''};
-baseMgmtDrugs.push(drug);
-renderBaseMgmtDrugs();
+baseMgmtDrugs=_grabDrugRows('#baseMgmtDrugsList','base-mgmt-drug',baseMgmtDrugs);baseMgmtDrugs.push(drug);renderBaseMgmtDrugs();_focusLastDrugRow('#baseMgmtDrugsList');
 }
 function removeBaseMgmtDrugRow(i){
-baseMgmtDrugs.splice(i,1);
+baseMgmtDrugs=_grabDrugRows('#baseMgmtDrugsList','base-mgmt-drug',baseMgmtDrugs);baseMgmtDrugs.splice(i,1);
 if(!baseMgmtDrugs.length)baseMgmtDrugs.push({name:'',dose:'',note:''});
 renderBaseMgmtDrugs();
 }
@@ -1779,8 +1783,8 @@ box.innerHTML=mgmtPkgModalDrugs.map((d,i)=>`
 box.querySelectorAll('.pkg-drug-name').forEach(inp=>attachAC(inp,candSavedDrugs));
 box.querySelectorAll('.pkg-drug-dose').forEach(inp=>attachAC(inp,candSavedDoses));
 }
-function addMgmtPkgModalRow(){mgmtPkgModalDrugs.push({name:'',dose:'',note:''});renderMgmtPkgModalDrugs();}
-function removeMgmtPkgModalRow(i){mgmtPkgModalDrugs.splice(i,1);if(!mgmtPkgModalDrugs.length)mgmtPkgModalDrugs.push({name:'',dose:'',note:''});renderMgmtPkgModalDrugs();}
+function addMgmtPkgModalRow(){mgmtPkgModalDrugs=_grabDrugRows('#mgmtPkgModalRows','pkg-drug',mgmtPkgModalDrugs);mgmtPkgModalDrugs.push({name:'',dose:'',note:''});renderMgmtPkgModalDrugs();_focusLastDrugRow('#mgmtPkgModalRows');}
+function removeMgmtPkgModalRow(i){mgmtPkgModalDrugs=_grabDrugRows('#mgmtPkgModalRows','pkg-drug',mgmtPkgModalDrugs);mgmtPkgModalDrugs.splice(i,1);if(!mgmtPkgModalDrugs.length)mgmtPkgModalDrugs.push({name:'',dose:'',note:''});renderMgmtPkgModalDrugs();}
 function saveMgmtPkgModal(){
 const name=$('mgmtPkgModalName').value.trim();
 if(!name){toast('⚠ Enter package name');return;}
@@ -1913,7 +1917,7 @@ let visitsRecordsLoaded=false;
 let data={patients:[],visits:[],prescriptions:[],labResults:[],chat:[],staffProfiles:[],medicalFiles:[],drugPackages:[],drugLibrary:[],settings:{clinicName:'',examPrice:0,followupPrice:0,sources:[],visitPurposes:[],rxLabTests:[]}};
 function qTable(table){
  let q=sb.from(table).select('*');
- if(table==='chat_messages')q=q.gte('ts',Date.now()-14*864e5).order('ts',{ascending:false}).limit(200);
+ if(table==='chat_messages')q=q.gte('ts',Date.now()-14*864e5).order('ts',{ascending:false}).limit(100);
  return q;
 }
 function qRows(table,rows){return table==='chat_messages'?(rows||[]).slice().reverse():(rows||[]);}
@@ -1950,12 +1954,13 @@ await idbSet(key,cur);
 if(c&&Array.isArray(c.rows)&&c.rows.length&&c.stamp&&(Date.now()-(c.fullAt||0))<7*864e5){
 try{
 const iso=new Date(c.stamp).toISOString();
-const[d,ids]=await Promise.all([pagedRows(()=>sb.from(table).select('*').gte('updated_at',iso)),pagedRows(()=>sb.from(table).select('id'))]);
-if(!d.error&&!ids.error){
-const alive=new Set((ids.data||[]).map(r=>r.id));
+const[d,cnt]=await Promise.all([pagedRows(()=>sb.from(table).select('*').gte('updated_at',iso)),sb.from(table).select('id',{count:'exact',head:true})]);
+if(!d.error&&!cnt.error&&cnt.count!=null){
 const map=new Map();
-c.rows.forEach(r=>{if(alive.has(r.id))map.set(r.id,r);});
+c.rows.forEach(r=>map.set(r.id,r));
 (d.data||[]).forEach(r=>map.set(r.id,r));
+/* egress-saver: ids are downloaded only when the row count differs (i.e. something was deleted) */
+if(map.size!==cnt.count){const ids=await pagedRows(()=>sb.from(table).select('id'));if(ids.error)throw ids.error;const alive=new Set((ids.data||[]).map(r=>r.id));[...map.keys()].forEach(k=>{if(!alive.has(k))map.delete(k);});}
 const rows=[...map.values()];
 await keep(rows,c.fullAt);
 return{data:rows,error:null};
@@ -2109,7 +2114,9 @@ try{
   return false;
 }
 }
-const RT_TABLES=[['patients','patients'],['visits','visits'],['prescriptions','prescriptions'],['lab_results','labResults'],['settings','settings'],['chat_messages','chat'],['staff_profiles','staffProfiles'],['clinical_visits','medicalFiles'],['drug_packages','drugPackages'],['drug_library','drugLibrary']];
+/* egress-saver: live sync only for the tables that change during the day; settings / staff / packages / drug library refresh on login, on returning to the tab and via the heartbeat */
+const RT_IDLE_PAUSE_MS=300000; /* hidden tab for this long => realtime is switched off until the tab is shown again */
+const RT_TABLES=[['patients','patients'],['visits','visits'],['prescriptions','prescriptions'],['lab_results','labResults'],['chat_messages','chat'],['clinical_visits','medicalFiles']];
 let rtChans={},rtBad={},rtGen=0,rtHb=null,rtDbOk=false,rtWarned=false;
 function rtSummary(){const bad=Object.keys(rtBad);return (rtDbOk?'Database: OK':'Database: UNREACHABLE')+(bad.length?' | Live sync failed for: '+bad.map(t=>t+' ('+rtBad[t]+')').join(', '):' | Live sync: OK');}
 function rtPaint(){
@@ -2121,7 +2128,7 @@ else{setStatus('online');}
 el.title=rtSummary();
 }
 async function rtHeartbeat(){
-try{const{error}=await sb.from('settings').select('key').limit(1);if(error)throw error;rtDbOk=true;}
+try{if(currentUser&&currentUser.id){const{data:me,error}=await sb.from('staff_profiles').select('blocked').eq('id',currentUser.id).maybeSingle();if(error)throw error;rtDbOk=true;if(me&&me.blocked){toast('🚪 Access revoked');doLogout();return;}}else{const{error}=await sb.from('settings').select('key').limit(1);if(error)throw error;rtDbOk=true;}}
 catch(e){rtDbOk=false;console.warn('Heartbeat failed',e);}
 rtPaint();
 }
@@ -2178,7 +2185,7 @@ console.error('Presence channel failed:',status,err);
 setTimeout(()=>{if(gen===rtGen&&currentUser&&ch===pc){try{sb.removeChannel(pc);}catch(e){}subscribeRealtimePresenceOnly(gen);}},8000);
 }
 });
-clearInterval(rtHb);rtHeartbeat();rtHb=setInterval(()=>{if(!document.hidden)rtHeartbeat();},240000);
+clearInterval(rtHb);rtHeartbeat();rtHb=setInterval(()=>{if(!document.hidden)rtHeartbeat();},600000);
 }
 function subscribeRealtimePresenceOnly(gen){
 if(gen!==rtGen||!currentUser)return;
@@ -2190,7 +2197,7 @@ else if(status==='CHANNEL_ERROR'||status==='TIMED_OUT'||status==='CLOSED'){setTi
 window.addEventListener('online',()=>{if(sb&&currentUser)rtHeartbeat();});
 window.addEventListener('offline',()=>{rtDbOk=false;rtPaint();});
 /* ===== Realtime auto-recovery: watchdog + full rebuild + data resync ===== */
-let rtBadSince=0,rtRebuilding=false,rtHiddenAt=0,rtAuthBound=false;
+let rtBadSince=0,rtRebuilding=false,rtHiddenAt=0,rtAuthBound=false,rtPaused=false,rtLastRebuild=0,rtRebuildFails=0,rtPauseTimer=null,rtLastWake=0;
 async function rtResync(){
  if(!sb||!currentUser)return;
  try{
@@ -2221,6 +2228,7 @@ async function rtResyncLight(){
   if(!pa.error)merge('patients',pa.data);
   if(!vi.error)merge('visits',vi.data);
   if(!ch.error)merge('chat',ch.data);
+  try{const{data:sr2}=await sb.from('settings').select('*');(sr2||[]).forEach(r=>{data.settings[r.key]=r.value;});}catch(_){}
   (data.chat||[]).filter(m=>!oldChat.has(m.id)).sort((a,b)=>(a.ts||0)-(b.ts||0)).forEach(m=>{try{receivePM(m);}catch(e){}});
   renderAll();
  }catch(e){console.warn('light resync failed',e);}
@@ -2238,22 +2246,26 @@ function rtBindAuth(){
 }
 setInterval(()=>{
  rtBindAuth();
- if(!currentUser||rtRebuilding)return;
+ if(!currentUser||rtRebuilding||rtPaused||document.hidden)return;
  if(Object.keys(rtBad).length){
   if(!rtBadSince)rtBadSince=Date.now();
-  else if(Date.now()-rtBadSince>20000&&navigator.onLine)rtRebuild();
- }else rtBadSince=0;
+  /* egress-saver: a failing table already retries by itself; a full rebuild is rare, spaced out and capped */
+  else if(Date.now()-rtBadSince>60000&&navigator.onLine&&Date.now()-rtLastRebuild>180000&&rtRebuildFails<3){rtLastRebuild=Date.now();rtRebuildFails++;rtRebuild();}
+ }else{rtBadSince=0;rtRebuildFails=0;}
 },5000);
 function rtWake(){
  if(!currentUser||!sb)return;
+ clearTimeout(rtPauseTimer);
+ if(Date.now()-rtLastWake<3000)return;rtLastWake=Date.now();
  const away=rtHiddenAt?Date.now()-rtHiddenAt:0;rtHiddenAt=0;
+ if(rtPaused){rtPaused=false;rtRebuildFails=0;rtBadSince=0;subscribeRealtime();loadedVisitPatients.clear();if(away>1800000)rtResync();else rtResyncLight();return;}
  rtHeartbeat();
  if(Object.keys(rtBad).length||away>1800000)rtRebuild();
  else if(away>30000)rtResyncLight();
 }
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')rtHiddenAt=Date.now();else rtWake();});
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden'){rtHiddenAt=Date.now();clearTimeout(rtPauseTimer);rtPauseTimer=setTimeout(async()=>{if(document.hidden&&currentUser&&sb&&!rtPaused){rtPaused=true;try{await unsubscribeRealtime();}catch(_){}}},RT_IDLE_PAUSE_MS);}else rtWake();});
 window.addEventListener('focus',rtWake);
-window.addEventListener('online',()=>{if(currentUser)setTimeout(rtRebuild,1500);});
+window.addEventListener('online',()=>{if(currentUser&&!rtPaused)setTimeout(rtRebuild,1500);});
 const FIELDS=[
 {k:'name',label:'اسم المريضة *',type:'text',ph:'ادخل الاسم...'},
 {k:'age',label:'السن *',type:'text',numeric:true},
