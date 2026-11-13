@@ -949,7 +949,7 @@ table{min-width:720px}
 <div class="add-row"><input id="newBaseInvLabTest" placeholder="Add test not in list"><button class="btn primary sm" type="button" id="addBaseInvLabTestBtn">➕ Add</button></div>
 <button class="btn gray sm" type="button" onclick="toggleLabsBox('baseInvLabsChecklist',this)">🧪 Show Lab Tests</button>
 <div id="baseInvLabsChecklist" class="check-grid" style="display:none"></div>
-<div id="baseInvLabsInlineResults" style="margin-top:10px"></div>
+<div id="baseInvLabsInlineResults" style="margin-top:10px"></div><div class="pdx-bar"><button class="btn blue" type="button" onclick="pdxInlineLabs(true,'print')">🖨 طباعة التحاليل</button><button class="btn gray" type="button" onclick="pdxInlineLabs(true,'pdf')">📄 PDF</button></div>
 </div>
 </div>
 </div>
@@ -1009,7 +1009,7 @@ table{min-width:720px}
 <h4>📋 Treatment Plan</h4>
 <textarea id="og_baseMgmtPlan" class="og-ta" style="min-height:80px"></textarea>
 </div>
-<button class="btn primary" onclick="saveBaseMgmtPrescription()" style="margin-top:12px;width:100%">💾 Save Prescription</button>
+<button class="btn primary" onclick="saveBaseMgmtPrescription()" style="margin-top:12px;width:100%">💾 Save Prescription</button><div class="pdx-bar full"><button class="btn blue" type="button" onclick="pdxMgmt(true,'print')">🖨 طباعة الروشتة</button><button class="btn gray" type="button" onclick="pdxMgmt(true,'pdf')">📄 PDF</button></div>
 </div>
 </div>
 
@@ -1130,7 +1130,7 @@ table{min-width:720px}
 <div class="add-row"><input id="newInvLabTest" placeholder="Add test not in list"><button class="btn primary sm" type="button" id="addInvLabTestBtn">➕ Add</button></div>
 <button class="btn gray sm" type="button" onclick="toggleLabsBox('invLabsChecklist',this)">🧪 Show Lab Tests</button>
 <div id="invLabsChecklist" class="check-grid" style="display:none"></div>
-<div id="invLabsInlineResults" style="margin-top:10px"></div>
+<div id="invLabsInlineResults" style="margin-top:10px"></div><div class="pdx-bar"><button class="btn blue" type="button" onclick="pdxInlineLabs(false,'print')">🖨 طباعة التحاليل</button><button class="btn gray" type="button" onclick="pdxInlineLabs(false,'pdf')">📄 PDF</button></div>
 </div>
 </div>
 </div>
@@ -1199,7 +1199,7 @@ table{min-width:720px}
 <h4>📋 Treatment Plan</h4>
 <textarea id="og_mgmtPlan" class="og-ta" style="min-height:80px"></textarea>
 </div>
-<button class="btn primary" onclick="saveMgmtPrescription()" style="margin-top:12px;width:100%">💾 Save Prescription</button>
+<button class="btn primary" onclick="saveMgmtPrescription()" style="margin-top:12px;width:100%">💾 Save Prescription</button><div class="pdx-bar full"><button class="btn blue" type="button" onclick="pdxMgmt(false,'print')">🖨 طباعة الروشتة</button><button class="btn gray" type="button" onclick="pdxMgmt(false,'pdf')">📄 PDF</button></div>
 </div>
 </div>
 <div id="pfNewVisitBar" style="display:none;position:sticky;bottom:10px;z-index:50;margin-top:12px;padding:12px;background:#fff1f7;border:2px solid #be185d;border-radius:12px;box-shadow:0 8px 24px rgba(190,24,93,.18)">
@@ -1278,7 +1278,7 @@ table{min-width:720px}
 </div>
 <div class="toolbar" style="margin-top:14px">
 <button class="btn primary" id="rxSaveBtn">💾 Save</button>
-<button class="btn blue" id="rxSavePrintBtn">💾 Save + Print / PDF</button>
+<button class="btn blue" id="rxSavePrintBtn">💾 Save + Print / PDF</button><button class="btn gray" type="button" onclick="pdxRxModal('print')">🖨 طباعة</button><button class="btn gray" type="button" onclick="pdxRxModal('pdf')">📄 PDF</button>
 </div>
 <div id="rxHistory"></div>
 </div>
@@ -3348,7 +3348,7 @@ const groups=groupByVisitDate(filePatient.id);
 if(!groups.length){box.innerHTML='<div class="empty">No labs or prescriptions yet</div>';return;}
 box.innerHTML=groups.map((g,i)=>{
 const key=g.date;const open=openVisitKeys[key]!==undefined?openVisitKeys[key]:(i===0);
-return`<div class="day-group" style="margin-bottom:10px"><div class="day-head" style="cursor:pointer" onclick="toggleVisitGroup('${key.replace(/'/g,"\\'")}')"><span>📅 ${g.date==='No date'?g.date:fmtDate(g.date)}</span><span class="cnt">${g.labs.length} labs — ${g.rxs.length} prescriptions</span><span style="margin-left:auto;color:#be185d;font-size:16px">${open?'▴':'▾'}</span></div>${open?`<div style="padding:4px 6px">${g.rxs.length?g.rxs.map(r=>`<div class="rx-hist-item" onclick="viewRx('${r.id}')"><span>💊 ${r.diagnosis?esc(r.diagnosis):'No diagnosis'} — ${(r.meds||[]).length} meds ${(r.labs&&r.labs.length)?' + '+r.labs.length+' labs':''}</span><span onclick="event.stopPropagation();"><button class="btn sm blue" onclick="viewRx('${r.id}')">👁</button> <button class="btn sm gray" onclick="loadRxInto('${r.id}')">✏️ تعديل</button> <button class="btn sm blue" onclick="printRx('${r.id}')">🖨 طباعة</button> <button class="btn sm red" onclick="event.stopPropagation();delRxFrom('${r.id}')">🗑 حذف</button></span></div>`).join(''):''}${g.labs.length?`<b style="font-size:13px;display:block;margin-top:8px;color:#166534">🧪 Lab Results</b><div class="visit-history-labs">${g.labs.map(l=>{const sp=splitLabNotes(l.notes);return`<div class="visit-history-lab-row"><div class="visit-history-lab-main"><b>${esc(l.testName)}</b><span>${esc(l.result)}</span><small>${esc(sp.unit||sp.note||'')}</small></div><div class="visit-history-lab-actions"><button class="btn sm gray" type="button" onclick="event.stopPropagation();editVisitHistoryLabResult('${l.id}')">✏️ تعديل</button><button class="btn sm red" type="button" onclick="event.stopPropagation();deleteVisitHistoryLabResult('${l.id}')">🗑 حذف</button></div></div>`;}).join('')}</div>`:''}</div>`:''}</div>`;
+return`<div class="day-group" style="margin-bottom:10px"><div class="day-head" style="cursor:pointer" onclick="toggleVisitGroup('${key.replace(/'/g,"\\'")}')"><span>📅 ${g.date==='No date'?g.date:fmtDate(g.date)}</span><span class="cnt">${g.labs.length} labs — ${g.rxs.length} prescriptions</span><span style="margin-left:auto;color:#be185d;font-size:16px">${open?'▴':'▾'}</span></div>${open?`<div style="padding:4px 6px">${g.rxs.length?g.rxs.map(r=>`<div class="rx-hist-item" onclick="viewRx('${r.id}')"><span>💊 ${r.diagnosis?esc(r.diagnosis):'No diagnosis'} — ${(r.meds||[]).length} meds ${(r.labs&&r.labs.length)?' + '+r.labs.length+' labs':''}</span><span onclick="event.stopPropagation();"><button class="btn sm blue" onclick="viewRx('${r.id}')">👁</button> <button class="btn sm gray" onclick="loadRxInto('${r.id}')">✏️ تعديل</button> <button class="btn sm blue" onclick="printRx('${r.id}')">🖨 طباعة</button><button class="btn sm gray" onclick="pdxRxById('${r.id}','pdf')">📄 PDF</button> <button class="btn sm red" onclick="event.stopPropagation();delRxFrom('${r.id}')">🗑 حذف</button></span></div>`).join(''):''}${g.labs.length?`<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:8px" onclick="event.stopPropagation()"><b style="font-size:13px;color:#166534">🧪 Lab Results</b><button class="btn sm blue" type="button" onclick="event.stopPropagation();pdxLabGroup('${g.date}','print')">🖨 طباعة</button><button class="btn sm gray" type="button" onclick="event.stopPropagation();pdxLabGroup('${g.date}','pdf')">📄 PDF</button></div><div class="visit-history-labs">${g.labs.map(l=>{const sp=splitLabNotes(l.notes);return`<div class="visit-history-lab-row"><div class="visit-history-lab-main"><b>${esc(l.testName)}</b><span>${esc(l.result)}</span><small>${esc(sp.unit||sp.note||'')}</small></div><div class="visit-history-lab-actions"><button class="btn sm gray" type="button" onclick="event.stopPropagation();editVisitHistoryLabResult('${l.id}')">✏️ تعديل</button><button class="btn sm red" type="button" onclick="event.stopPropagation();deleteVisitHistoryLabResult('${l.id}')">🗑 حذف</button></div></div>`;}).join('')}</div>`:''}</div>`:''}</div>`;
 }).join('');
 }
 async function editVisitHistoryLabResult(id){
@@ -4520,7 +4520,7 @@ if(andPrint&&savedId)printRx(savedId);
 function renderRxHistory(){
 const box=$('rxHistory');if(!rxPatient){box.innerHTML='';return;}
 const list=data.prescriptions.filter(r=>r.patientId===rxPatient.id).sort((a,b)=>(b.ts||0)-(a.ts||0));
-box.innerHTML=list.length?`<div class="rx-hist"><b style="font-size:13px">📜 Previous Prescriptions:</b>`+list.map(r=>`<div class="rx-hist-item"><span style="cursor:pointer;flex:1" onclick="viewRx('${r.id}')">🗓 ${r.date||''} — ${r.diagnosis?esc(r.diagnosis):'No dx'} (${(r.meds||[]).length} meds)</span><span style="display:flex;gap:4px"><button class="btn sm gray" onclick="event.stopPropagation();loadRxInto('${r.id}')">✏️ تعديل</button><button class="btn sm blue" onclick="event.stopPropagation();viewRx('${r.id}')">👁</button><button class="btn sm blue" onclick="event.stopPropagation();printRx('${r.id}')">🖨 طباعة</button><button class="btn sm red" onclick="event.stopPropagation();delRx('${r.id}')">🗑 حذف</button></span></div>`).join('')+`</div>`:'';
+box.innerHTML=list.length?`<div class="rx-hist"><b style="font-size:13px">📜 Previous Prescriptions:</b>`+list.map(r=>`<div class="rx-hist-item"><span style="cursor:pointer;flex:1" onclick="viewRx('${r.id}')">🗓 ${r.date||''} — ${r.diagnosis?esc(r.diagnosis):'No dx'} (${(r.meds||[]).length} meds)</span><span style="display:flex;gap:4px"><button class="btn sm gray" onclick="event.stopPropagation();loadRxInto('${r.id}')">✏️ تعديل</button><button class="btn sm blue" onclick="event.stopPropagation();viewRx('${r.id}')">👁</button><button class="btn sm blue" onclick="event.stopPropagation();printRx('${r.id}')">🖨 طباعة</button><button class="btn sm gray" onclick="event.stopPropagation();pdxRxById('${r.id}','pdf')">📄 PDF</button><button class="btn sm red" onclick="event.stopPropagation();delRx('${r.id}')">🗑 حذف</button></span></div>`).join('')+`</div>`:'';
 }
 function loadRxInto(id){
 const r=data.prescriptions.find(x=>x.id===id);if(!r||!rxPatient)return;
@@ -5821,5 +5821,155 @@ function hxFolPreview(){
  document.body.appendChild(o);
 }
 </script>
+<style id="pdx-style">
+.pdx-bar{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.pdx-bar .btn{flex:0 0 auto}
+.pdx-bar.full .btn{flex:1 1 140px}
+@media print{.pdx-bar{display:none!important}}
+</style>
+<script id="pdx-print-pdf-addon">
+/* ===== Print / PDF buttons for prescriptions & lab tests ===== */
+(function(){
+  var E=function(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});};
+  var T=function(m){try{toast(m);}catch(_){}};
+  var today=function(){try{return todayStr();}catch(_){return new Date().toISOString().slice(0,10);}};
+  var val=function(sel,root){var e=(root||document).querySelector(sel);return e?String(e.value||'').trim():'';};
+  var g=function(name){
+    try{
+      switch(name){
+        case 'rxPatient':return typeof rxPatient!=='undefined'?rxPatient:null;
+        case 'filePatient':return typeof filePatient!=='undefined'?filePatient:null;
+        case 'data':return typeof data!=='undefined'?data:null;
+        case 'mgmtExtraLabs':return typeof mgmtExtraLabs!=='undefined'?mgmtExtraLabs:[];
+        case 'baseMgmtExtraLabs':return typeof baseMgmtExtraLabs!=='undefined'?baseMgmtExtraLabs:[];
+      }
+    }catch(_){}
+    return null;
+  };
+
+  function buildDoc(o,mode){
+    var kind=o.kind==='lab'?'Lab Tests':'Rx';
+    var title=kind+' - '+(o.name||'')+' - '+(o.date||today());
+    var tdS='padding:10px;border-bottom:1px solid #e5e7eb;';
+    var meds=(o.meds||[]).map(function(m,i){
+      return '<tr><td style="'+tdS+'width:40px;text-align:center;font-weight:bold;font-size:16px">'+(i+1)+'</td>'
+        +'<td dir="auto" style="'+tdS+'font-weight:600;font-size:15px">'+E(m.name)+'</td>'
+        +'<td dir="auto" style="'+tdS+'font-size:15px">'+E(m.dose)+'</td>'
+        +'<td dir="auto" style="'+tdS+'color:#555;font-size:14px">'+E(m.note)+'</td></tr>';
+    }).join('');
+    var medsHtml=meds?('<h2 style="color:#be185d;font-size:18px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #be185d">💊 Medications</h2>'
+      +'<table><thead><tr><th style="width:40px">#</th><th>Drug</th><th>Dosage</th><th>Instructions</th></tr></thead><tbody>'+meds+'</tbody></table>'):'';
+    var labsHtml=(o.labs&&o.labs.length)?('<div style="margin-top:25px;padding:15px;background:#f0fdf4;border-radius:10px;border:1px solid #bbf7d0;page-break-inside:avoid">'
+      +'<h3 style="font-size:18px;color:#15803d;margin:0 0 12px;padding-bottom:8px;border-bottom:2px solid #15803d">🧪 Required Lab Tests</h3>'
+      +'<ol style="padding-left:25px;line-height:2.2;font-size:16px;margin:0">'+o.labs.map(function(l){return '<li dir="auto" style="margin-bottom:4px">'+E(l)+'</li>';}).join('')+'</ol></div>'):'';
+    var resHtml=(o.labResults&&o.labResults.length)?('<h2 style="color:#15803d;font-size:18px;margin:0 0 10px;padding-bottom:6px;border-bottom:2px solid #15803d">🧪 Lab Tests</h2>'
+      +'<table><thead><tr><th style="width:40px">#</th><th>Test</th><th>Result</th><th>Unit</th></tr></thead><tbody>'
+      +o.labResults.map(function(l,i){
+        return '<tr><td style="'+tdS+'text-align:center;font-weight:bold">'+(i+1)+'</td>'
+          +'<td dir="auto" style="'+tdS+'font-weight:600;font-size:15px">'+E(l.test)+'</td>'
+          +'<td dir="auto" style="'+tdS+'font-size:15px;min-width:90px">'+E(l.result)+'</td>'
+          +'<td dir="auto" style="'+tdS+'color:#555;font-size:14px">'+E(l.unit)+'</td></tr>';
+      }).join('')+'</tbody></table>'):'';
+    var diagHtml=o.diagnosis?('<div style="margin-bottom:20px;padding:12px 15px;background:#fef3c7;border-right:4px solid #d97706;border-radius:8px"><b style="color:#92400e;font-size:15px">Diagnosis:</b> <span dir="auto" style="color:#1e293b;font-size:15px">'+E(o.diagnosis)+'</span></div>'):'';
+    var planHtml=o.plan?('<div style="margin-top:25px;padding:15px;background:#f8fafc;border-radius:10px;border:1px solid #e2e8f0;page-break-inside:avoid"><h3 style="font-size:17px;color:#be185d;margin:0 0 8px">📋 Treatment Plan</h3><div dir="auto" style="white-space:pre-wrap;font-size:15px;line-height:1.8">'+E(o.plan)+'</div></div>'):'';
+    var css='@page{margin:12mm}@media print{.no-print{display:none!important}}'
+      +'body{font-family:"Segoe UI",Tahoma,Arial,sans-serif;padding:15mm 20mm;max-width:210mm;margin:0 auto;color:#111;-webkit-print-color-adjust:exact;print-color-adjust:exact}'
+      +'.controls{position:fixed;top:10px;left:10px;background:#f0fdf4;border:2px solid #22c55e;padding:12px;border-radius:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;z-index:100;max-width:calc(100vw - 40px)}'
+      +'.controls button{padding:8px 14px;border:1px solid #cbd5e1;border-radius:6px;cursor:pointer;font-weight:600;background:#fff;font-size:13px}'
+      +'.print-btn{background:#be185d!important;color:#fff;border-color:#be185d!important}.close-btn{background:#64748b!important;color:#fff}'
+      +'.hint{flex-basis:100%;font-size:12px;color:#166534}'
+      +'.patient-info{margin-bottom:20px;padding:12px;background:#f1f5f9;border-radius:8px;font-size:15px;border:2px solid #be185d}.patient-info b{color:#be185d}'
+      +'table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#fdf2f8;padding:12px;text-align:left;border-bottom:2px solid #be185d;font-size:14px;color:#9d174d}'
+      +'tr{page-break-inside:avoid}';
+    var off="window._off=(window._off||0)+";
+    var ctl='<div class="controls no-print">'
+      +'<button onclick="window._off=(window._off||0)-5;document.getElementById(\'rxContent\').style.marginTop=window._off+\'mm\';document.getElementById(\'offVal\').textContent=window._off+\'mm\'">⬆ 5mm</button>'
+      +'<button onclick="'+off+'5;document.getElementById(\'rxContent\').style.marginTop=window._off+\'mm\';document.getElementById(\'offVal\').textContent=window._off+\'mm\'">⬇ 5mm</button>'
+      +'<button onclick="window._off=0;document.getElementById(\'rxContent\').style.marginTop=\'0mm\';document.getElementById(\'offVal\').textContent=\'0mm\'">↻</button>'
+      +'<span id="offVal" style="font-weight:700;padding:4px 10px;background:#fff;border-radius:6px;border:1px solid #cbd5e1">0mm</span>'
+      +'<button class="print-btn" onclick="window.print()">🖨 طباعة</button>'
+      +'<button class="print-btn" onclick="window.print()">📄 حفظ PDF</button>'
+      +'<button class="close-btn" onclick="window.close()">✖ إغلاق</button>'
+      +'<div class="hint">لحفظ PDF: اضغط «حفظ PDF» ثم اختار <b>Save as PDF</b> / <b>حفظ كملف PDF</b> كطابعة.</div></div>';
+    var info='<div class="patient-info"><b>Patient:</b> <span dir="auto">'+E(o.name||'')+'</span> | <b>Age:</b> '+E(o.age||'')+' | <b>Date:</b> '+E(o.date||today())+'</div>';
+    var auto=(mode==='pdf')?('<scr'+'ipt>window.onload=function(){setTimeout(function(){window.print();},500);};</scr'+'ipt>'):'';
+    return '<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>'+E(title)+'</title><style>'+css+'</style></head><body>'
+      +ctl+'<div class="rx-content" id="rxContent" style="margin-top:0mm">'+info+diagHtml+medsHtml+labsHtml+resHtml+planHtml+'</div>'+auto+'</body></html>';
+  }
+
+  function show(o,mode){
+    var w=window.open('','_blank');
+    if(!w){T('⚠ المتصفح منع النافذة — اسمح بالنوافذ المنبثقة (Pop-ups) وجرب تاني');return;}
+    w.document.write(buildDoc(o,mode));w.document.close();
+    if(mode==='pdf')T('📄 اختار Save as PDF من نافذة الطباعة');
+  }
+  window.pdxShow=show;
+
+  function rows(sel,n,d,t){
+    return Array.prototype.slice.call(document.querySelectorAll(sel)).map(function(r){
+      return {name:val(n,r),dose:val(d,r),note:val(t,r)};
+    }).filter(function(m){return m.name||m.dose;});
+  }
+  function uniq(a){var s={};return a.filter(function(x){x=String(x||'').trim();if(!x||s[x])return false;return s[x]=true;});}
+
+  /* 1) Prescription window (draft, no need to save first) */
+  window.pdxRxModal=function(mode){
+    var p=g('rxPatient');
+    if(!p){T('⚠ افتح روشتة مريض الأول');return;}
+    var c=collectRx();
+    if(!c.diagnosis&&!c.meds.length&&!c.labs.length){T('⚠ اكتب بيانات الروشتة الأول');return;}
+    show({kind:'rx',name:p.name,age:p.age,date:today(),diagnosis:c.diagnosis,meds:c.meds,labs:c.labs},mode);
+  };
+
+  /* 2) Saved prescription from history */
+  window.pdxRxById=function(id,mode){
+    var d=g('data');var r=d&&d.prescriptions&&d.prescriptions.filter(function(x){return x.id===id;})[0];
+    if(!r){T('⚠ الروشتة غير موجودة');return;}
+    show({kind:'rx',name:r.patientName,age:r.patientAge,date:r.date,diagnosis:r.diagnosis,meds:r.meds||[],labs:r.labs||[]},mode);
+  };
+
+  /* 3) Management section (drugs + required labs + plan) inside the medical file / visit */
+  window.pdxMgmt=function(base,mode){
+    var p=g('filePatient');
+    if(!p){T('⚠ افتح ملف مريض الأول');return;}
+    var P=base?'base':'';
+    var meds=base?rows('#baseMgmtDrugsList .rx-row','.base-mgmt-drug-name','.base-mgmt-drug-dose','.base-mgmt-drug-note')
+                 :rows('#mgmtDrugsList .rx-row','.mgmt-drug-name','.mgmt-drug-dose','.mgmt-drug-note');
+    var checked=Array.prototype.slice.call(document.querySelectorAll(base?'#baseMgmtLabsChecklist input:checked':'#mgmtLabsChecklist input:checked')).map(function(i){return i.value;});
+    var extra=g(base?'baseMgmtExtraLabs':'mgmtExtraLabs')||[];
+    var labs=uniq(checked.concat(extra));
+    var plan=val(base?'#og_baseMgmtPlan':'#og_mgmtPlan');
+    if(!meds.length&&!labs.length&&!plan){T('⚠ اكتب أدوية أو تحاليل الأول');return;}
+    show({kind:'rx',name:p.name,age:p.age,date:today(),meds:meds,labs:labs,plan:plan},mode);
+  };
+
+  /* 4) Lab tests with results typed in the Investigations section */
+  window.pdxInlineLabs=function(base,mode){
+    var p=g('filePatient');
+    if(!p){T('⚠ افتح ملف مريض الأول');return;}
+    var sel=base?'#baseInvLabsInlineResults .lab-inline':'#invLabsInlineResults .lab-inline';
+    var list=Array.prototype.slice.call(document.querySelectorAll(sel)).map(function(b){
+      return {test:b.getAttribute('data-test')||'',result:val('.lab-result',b),unit:val('.lab-unit',b)};
+    }).filter(function(x){return x.test;});
+    if(!list.length){T('⚠ اختار التحاليل من «Show Lab Tests» الأول');return;}
+    show({kind:'lab',name:p.name,age:p.age,date:today(),labResults:list},mode);
+  };
+
+  /* 5) Lab results of one date in the visit history */
+  window.pdxLabGroup=function(date,mode){
+    var p=g('filePatient'),d=g('data');
+    if(!p||!d){return;}
+    var labs=(d.labResults||[]).filter(function(l){return l.patientId===p.id&&(l.date||'No date')===date;})
+      .sort(function(a,b){return (a.ts||0)-(b.ts||0);});
+    if(!labs.length){T('⚠ مفيش تحاليل في اليوم ده');return;}
+    var list=labs.map(function(l){
+      var m=/^Unit:\s*(.*)$/i.exec(String(l.notes||'').trim());
+      return {test:l.testName,result:l.result,unit:m?m[1]:(l.notes||'')};
+    });
+    show({kind:'lab',name:p.name,age:p.age,date:date==='No date'?today():date,labResults:list},mode);
+  };
+})();
+</script>
+
 </body>
 </html>
